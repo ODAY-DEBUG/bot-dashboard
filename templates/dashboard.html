@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Servers</title>
+</head>
+<body style="background-color: #2b2d31; color: white; font-family: Arial; text-align: center; padding-top: 50px;">
+    <h1>Your Servers</h1>
+    <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 20px; padding: 20px;">
+        {% for guild in guilds %}
+            <div style="background-color: #1e1f22; padding: 20px; border-radius: 10px; width: 200px;">
+                {% if guild.icon %}
+                <img src="https://cdn.discordapp.com/icons/{{ guild.id }}/{{ guild.icon }}.png" alt="Icon" style="width: 80px; height: 80px; border-radius: 50%;"><br>
+                {% else %}
+                <div style="width: 80px; height: 80px; border-radius: 50%; background-color: #5865F2; margin: auto; line-height: 80px; font-size: 30px;">{{ guild.name[0] }}</div><br>
+                {% endif %}
+                <h3>{{ guild.name }}</h3>
+                <a href="/dashboard/{{ guild.id }}" style="color: #00b0f4;">Manage Settings</a>
+            </div>
+        {% endfor %}
+    </div>
+</body>
+</html>

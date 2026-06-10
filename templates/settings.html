@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Settings for {{ guild_name }}</title>
+</head>
+<body style="background-color: #2b2d31; color: white; font-family: Arial; text-align: center; padding-top: 50px;">
+    <h1>Settings for {{ guild_name }}</h1>
+    
+    <div style="background-color: #1e1f22; padding: 30px; border-radius: 10px; display: inline-block; text-align: left;">
+        <h2>Auto-Role</h2>
+        <p>Set the role given to new members when they join.</p>
+        
+        <form action="/dashboard/{{ guild_id }}" method="POST">
+            <label for="autorole_id">Role ID:</label><br>
+            <input type="text" id="autorole_id" name="autorole_id" 
+                   value="{{ settings.autorole.role_id if settings.autorole else '' }}" 
+                   style="padding: 10px; width: 300px; border-radius: 5px; border: none;"><br><br>
+            
+            <button type="submit" style="background-color: #00b0f4; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer;">Save Settings</button>
+        </form>
+    </div>
+    <br><br>
+    <a href="/dashboard" style="color: #00b0f4;">← Back to Servers</a>
+</body>
+</html>
