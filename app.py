@@ -9,15 +9,20 @@ load_dotenv()
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET", "make_up_a_random_string_here")
 
+# --- FIX: Force Flask to use secure cookies for HTTPS (Render) ---
+app.config['SESSION_COOKIE_SECURE'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+# -----------------------------------------------------------------
+
 # Discord OAuth2 Config
 CLIENT_ID = os.getenv("CLIENT_ID")
 CLIENT_SECRET = os.getenv("CLIENT_SECRET")
 REDIRECT_URI = os.getenv("REDIRECT_URI")
 
-# --- Connect to MongoDB (The same one your bot uses!) ---
+# --- Connect to MongoDB ---
 MONGO_URI = os.getenv("MONGO_URI")
 mongo_client = MongoClient(MONGO_URI)
-db = mongo_client["discord_bot"] # Must match your bot's database name
+db = mongo_client["discord_bot"] 
 
 @app.route("/")
 def index():
@@ -31,7 +36,7 @@ def login():
 def callback():
     code = request.args.get("code")
     if not code:
-        return redirect("/")
+        return "No code provided by Discord.", 400
 
     data = {
         "client_id": CLIENT_ID,
@@ -46,14 +51,21 @@ def callback():
     response = requests.post("https://discord.com/api/oauth2/token", data=data, headers=headers)
     tokens = response.json()
 
+    # --- FIX: Show the actual error if Discord rejects the login ---
     if "access_token" not in tokens:
-        return "Error logging in.", 400
+        error_desc = tokens.get("error_description", tokens.get("error", "Unknown error"))
+        return f"<h1>Login Failed</h1><p>Discord said: {error_desc}</p><p>Check if your REDIRECT_URI in Render exactly matches the Discord Developer Portal!</p>", 400
+    # -----------------------------------------------------------------
 
     session["access_token"] = tokens["access_token"]
 
     # Get user's servers
     guild_response = requests.get("https://discord.com/api/users/@me/guilds", headers={"Authorization": f"Bearer {session['access_token']}"})
     guilds = guild_response.json()
+
+    # Check if guilds is a list (success) or dict (error)
+    if not isinstance(guilds, list):
+        return "Failed to fetch user guilds.", 400
 
     # Filter to servers where the user is Admin or has Manage Server
     manageable_guilds = []
@@ -79,13 +91,10 @@ def guild_dashboard(guild_id):
         return redirect("/")
 
     if request.method == "POST":
-        # Saving settings from the website form
         autorole_id = request.form.get("autorole_id")
         if autorole_id:
-            # Clean up the ID if they pasted a Discord role ping
             autorole_id = autorole_id.strip("<@&").strip(">") 
             
-            # Save to MongoDB! The bot will read this.
             db["autorole_settings"].update_one(
                 {"guild_id": guild_id},
                 {"$set": {"role_id": int(autorole_id)}},
