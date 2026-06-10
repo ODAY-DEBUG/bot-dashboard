@@ -9,17 +9,23 @@ load_dotenv()
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET", "make_up_a_random_string_here")
 
-# --- FIX: Force Flask to use secure cookies for HTTPS (Render) ---
+# Force Flask to use secure cookies for HTTPS (Render)
 app.config['SESSION_COOKIE_SECURE'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
-# -----------------------------------------------------------------
 
 # Discord OAuth2 Config
 CLIENT_ID = os.getenv("CLIENT_ID")
 CLIENT_SECRET = os.getenv("CLIENT_SECRET")
 REDIRECT_URI = os.getenv("REDIRECT_URI")
 
-# --- Connect to MongoDB ---
+# Print them to Render logs so we can verify they loaded correctly
+print(f"--- DEBUG ENV VARS ---")
+print(f"CLIENT_ID: {CLIENT_ID}")
+print(f"REDIRECT_URI: {REDIRECT_URI}")
+print(f"CLIENT_SECRET is loaded: {'Yes' if CLIENT_SECRET else 'NO!'}")
+print(f"----------------------")
+
+# Connect to MongoDB
 MONGO_URI = os.getenv("MONGO_URI")
 mongo_client = MongoClient(MONGO_URI)
 db = mongo_client["discord_bot"] 
@@ -51,23 +57,22 @@ def callback():
     response = requests.post("https://discord.com/api/oauth2/token", data=data, headers=headers)
     tokens = response.json()
 
-    # --- FIX: Show the actual error if Discord rejects the login ---
+    # --- CRITICAL DEBUG: Print the response from Discord to Render Logs ---
+    print(f"DISCORD TOKEN RESPONSE: {tokens}")
+    # ----------------------------------------------------------------------
+
     if "access_token" not in tokens:
         error_desc = tokens.get("error_description", tokens.get("error", "Unknown error"))
-        return f"<h1>Login Failed</h1><p>Discord said: {error_desc}</p><p>Check if your REDIRECT_URI in Render exactly matches the Discord Developer Portal!</p>", 400
-    # -----------------------------------------------------------------
+        return f"<h1>Login Failed</h1><p>Discord said: {error_desc}</p><p>Check your Render logs for more details!</p>", 400
 
     session["access_token"] = tokens["access_token"]
 
-    # Get user's servers
     guild_response = requests.get("https://discord.com/api/users/@me/guilds", headers={"Authorization": f"Bearer {session['access_token']}"})
     guilds = guild_response.json()
 
-    # Check if guilds is a list (success) or dict (error)
     if not isinstance(guilds, list):
         return "Failed to fetch user guilds.", 400
 
-    # Filter to servers where the user is Admin or has Manage Server
     manageable_guilds = []
     for guild in guilds:
         permissions = int(guild.get("permissions", 0))
@@ -102,7 +107,6 @@ def guild_dashboard(guild_id):
             )
         return redirect(f"/dashboard/{guild_id}")
 
-    # GET request: Show the current settings
     settings = {}
     settings["autorole"] = db["autorole_settings"].find_one({"guild_id": guild_id})
     
