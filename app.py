@@ -102,6 +102,35 @@ def guild_dashboard(guild_id):
                 {"$set": {"block_links": block_links, "block_invites": block_invites, "banned_words": banned_words, "active_channels": active_channels}}, 
                 upsert=True
             )
+	elif form_type == "announcement":
+            channel_id = request.form.get("announcement_channel_id")
+            message = request.form.get("announcement_message")
+            if channel_id and message:
+                # Use the Bot Token to send a message to the selected channel
+                requests.post(
+                    f"https://discord.com/api/v10/channels/{channel_id}/messages",
+                    headers={"Authorization": f"Bot {BOT_TOKEN}"},
+                    json={"content": message}
+                )
+                
+        elif form_type == "config":
+            staff_role = request.form.get("STAFF_ROLE")
+            mod_role = request.form.get("MOD_ROLE")
+            admin_role = request.form.get("ADMIN_ROLE")
+            trusted_staff_role = request.form.get("TRUSTED_STAFF_ROLE")
+            log_channel_id = request.form.get("LOG_CHANNEL_ID")
+            
+            db["bot_config"].update_one(
+                {"guild_id": guild_id},
+                {"$set": {
+                    "STAFF_ROLE": staff_role,
+                    "MOD_ROLE": mod_role,
+                    "ADMIN_ROLE": admin_role,
+                    "TRUSTED_STAFF_ROLE": trusted_staff_role,
+                    "LOG_CHANNEL_ID": int(log_channel_id) if log_channel_id and log_channel_id != "none" else None
+                }},
+                upsert=True
+            )
             
         return redirect(f"/dashboard/{guild_id}")
 

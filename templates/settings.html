@@ -14,6 +14,8 @@
     <div class="nav-item" onclick="switchTab('welcome', this)">👋 Welcome</div>
     <div class="nav-item" onclick="switchTab('logging', this)">📜 Logging</div>
     <div class="nav-item" onclick="switchTab('automod', this)">🛡️ AutoMod</div>
+    <div class="nav-item" onclick="switchTab('announcement', this)">📢 Announcement</div>
+    <div class="nav-item" onclick="switchTab('config', this)">⚙️ Config & Roles</div>
 </div>
 
 <div class="content">
@@ -121,6 +123,74 @@
             </div>
 
             <button type="submit">Save AutoMod</button>
+        </form>
+    </div>
+
+    <!-- ANNOUNCEMENT CARD -->
+    <div id="announcement" class="card">
+        <h3>Send Announcement</h3>
+        <p>Send a message as the bot to a specific channel.</p>
+        <form method="POST">
+            <input type="hidden" name="form_type" value="announcement">
+            <div class="form-group">
+                <label>Target Channel</label>
+                <select name="announcement_channel_id" required>
+                    <option value="" disabled selected>Select a channel...</option>
+                    {% for channel in channels|sort(attribute='position') %}
+                    <option value="{{ channel.id }}">
+                        # {{ channel.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Message Content</label>
+                <textarea name="announcement_message" placeholder="Type your announcement here... You can use Discord markdown like **bold** or @everyone." required></textarea>
+            </div>
+            <button type="submit">Send Announcement</button>
+        </form>
+    </div>
+
+    <!-- CONFIG & ROLES CARD -->
+    <div id="config" class="card">
+        <h3>Bot Config & Role Names</h3>
+        <p>Change the role names the bot looks for without restarting the bot. Must match your Discord server roles exactly!</p>
+        <form method="POST">
+            <input type="hidden" name="form_type" value="config">
+            
+            <div class="form-group">
+                <label>Staff Role Name</label>
+                <input type="text" name="STAFF_ROLE" value="{% if settings.config %}{{ settings.config.STAFF_ROLE }}{% else %}Staff{% endif %}" required>
+            </div>
+            
+            <div class="form-group">
+                <label>Moderator Role Name</label>
+                <input type="text" name="MOD_ROLE" value="{% if settings.config %}{{ settings.config.MOD_ROLE }}{% else %}Moderator{% endif %}" required>
+            </div>
+            
+            <div class="form-group">
+                <label>Admin Role Name</label>
+                <input type="text" name="ADMIN_ROLE" value="{% if settings.config %}{{ settings.config.ADMIN_ROLE }}{% else %}Admin{% endif %}" required>
+            </div>
+
+            <div class="form-group">
+                <label>Trusted Staff Role Name</label>
+                <input type="text" name="TRUSTED_STAFF_ROLE" value="{% if settings.config %}{{ settings.config.TRUSTED_STAFF_ROLE }}{% else %}Trusted Staff{% endif %}" required>
+            </div>
+
+            <div class="form-group">
+                <label>Mod-Logs Channel</label>
+                <select name="LOG_CHANNEL_ID">
+                    <option value="none" {% if not settings.config or not settings.config.LOG_CHANNEL_ID %}selected{% endif %}>Disabled</option>
+                    {% for channel in channels|sort(attribute='position') %}
+                    <option value="{{ channel.id }}" {% if settings.config and settings.config.LOG_CHANNEL_ID and settings.config.LOG_CHANNEL_ID|string == channel.id|string %}selected{% endif %}>
+                        # {{ channel.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <button type="submit">Save Config</button>
         </form>
     </div>
 
