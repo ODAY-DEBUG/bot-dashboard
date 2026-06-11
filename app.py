@@ -196,7 +196,6 @@ def guild_dashboard(guild_id):
 
     # GET Request: Fetch Data for Display
     bot_headers = {"Authorization": f"Bot {BOT_TOKEN}"}
-    "applications": list(db["applications_config"].find({"guild_id": guild_id}))
     
     # Fetch Roles
     roles_res = requests.get(f"https://discord.com/api/v10/guilds/{guild_id}/roles", headers=bot_headers)
@@ -208,13 +207,14 @@ def guild_dashboard(guild_id):
     channels = chans_res.json() if chans_res.status_code == 200 else []
     text_channels = [c for c in channels if c["type"] == 0]
 
-    # Fetch Settings
+        # Fetch Settings
     settings = {
         "autorole": db["autorole_settings"].find_one({"guild_id": guild_id}),
         "welcome": db["welcome_settings"].find_one({"guild_id": guild_id}),
         "logging": db["log_settings"].find_one({"guild_id": guild_id}),
         "automod": db["automod_settings"].find_one({"guild_id": guild_id}),
-        "config": db["bot_config"].find_one({"guild_id": guild_id})
+        "config": db["bot_config"].find_one({"guild_id": guild_id}), # <-- Added comma here
+        "applications": list(db["applications_config"].find({"guild_id": guild_id})) # <-- Moved inside!
     }
     
     guild_name = "Unknown Server"
