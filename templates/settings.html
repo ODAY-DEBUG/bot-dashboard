@@ -220,7 +220,7 @@
             </form>
         </div>
 
-        <!-- Create / Edit App Section -->
+	<!-- Create / Edit App Section -->
         <form method="POST">
             <input type="hidden" name="form_type" value="create_app">
             <div class="form-group">
@@ -233,12 +233,8 @@
             </div>
             
             <div class="form-group">
-                <label>Questions (Max 5. Leave blank to ignore)</label>
-                <input type="text" name="q1" placeholder="Question 1" required style="margin-bottom:5px;">
-                <input type="text" name="q2" placeholder="Question 2 (Optional)" style="margin-bottom:5px;">
-                <input type="text" name="q3" placeholder="Question 3 (Optional)" style="margin-bottom:5px;">
-                <input type="text" name="q4" placeholder="Question 4 (Optional)" style="margin-bottom:5px;">
-                <input type="text" name="q5" placeholder="Question 5 (Optional)" style="margin-bottom:5px;">
+                <label>Questions (Type one question per line - No Limit!)</label>
+                <textarea name="questions_text" required placeholder="What is your IGN?&#10;Why do you want to join?&#10;Do you have past experience?&#10;What makes you stand out?" style="min-height: 150px;"></textarea>
             </div>
 
             <div class="checkbox-group">
@@ -294,7 +290,10 @@
             </div>
             {% endfor %}
             {% if not settings.applications %}
-            <p style="color:var(--text-muted); font-size:14px;">No applications created yet.</p>
+            <small style="color: var(--text-muted);">
+    	    	Status: {% if app.is_open %}🟢 Open{% else %}🔴 Closed{% endif %} | Questions: {{ app.questions|length }}<br>
+    	    	{% for q in app.questions %}{{ loop.index }}. {{ q }}<br>{% endfor %}
+	    </small>
             {% endif %}
         </div>
     </div>

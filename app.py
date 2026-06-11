@@ -148,7 +148,11 @@ def guild_dashboard(guild_id):
         elif form_type == "create_app":
             app_id = request.form.get("app_id").lower().replace(" ", "-")
             app_name = request.form.get("app_name")
-            questions = [request.form.get(f"q{i}") for i in range(1, 6) if request.form.get(f"q{i}")]
+            
+            # NEW: Read from a single text box, split by new lines, and remove empty lines
+            questions_raw = request.form.get("questions_text", "")
+            questions = [q.strip() for q in questions_raw.split("\n") if q.strip()]
+            
             is_open = request.form.get("is_open") == "on"
             submitted_channel_id = request.form.get("submitted_channel_id")
             accepted_channel_id = request.form.get("accepted_channel_id")
