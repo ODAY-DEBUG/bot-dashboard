@@ -194,10 +194,11 @@
             <button type="submit">Save Config</button>
         </form>
     </div>
+
     <!-- APPLICATIONS CARD -->
     <div id="applications" class="card">
         <h3>Applications</h3>
-        <p>Create application forms. Users will be DM'd the questions when they click the apply button.</p>
+        <p>Create application forms. Users will be DM'd the questions one by one when they click the apply button.</p>
 
         <!-- Send Panel Section -->
         <div style="background-color: var(--input-bg); padding: 15px; border-radius: 6px; margin-bottom: 25px; border: 1px solid var(--border);">
@@ -220,7 +221,7 @@
             </form>
         </div>
 
-	<!-- Create / Edit App Section -->
+        <!-- Create / Edit App Section -->
         <form method="POST">
             <input type="hidden" name="form_type" value="create_app">
             <div class="form-group">
@@ -277,23 +278,27 @@
         <h3 style="margin-top: 40px;">Existing Applications</h3>
         <div style="display: flex; flex-direction: column; gap: 10px;">
             {% for app in settings.applications %}
-            <div style="background-color: var(--input-bg); padding: 15px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;">
-                <div>
-                    <strong>{{ app.app_name }}</strong> <code style="color:var(--text-muted); background:var(--bg-main); padding:2px 5px; border-radius:3px;">{{ app.app_id }}</code><br>
-                    <small style="color: var(--text-muted);">Status: {% if app.is_open %}🟢 Open{% else %}🔴 Closed{% endif %} | Questions: {{ app.questions|length }}</small>
+            <div style="background-color: var(--input-bg); padding: 15px; border-radius: 6px; border: 1px solid var(--border);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <div>
+                        <strong>{{ app.app_name }}</strong> <code style="color:var(--text-muted); background:var(--bg-main); padding:2px 5px; border-radius:3px;">{{ app.app_id }}</code><br>
+                        <small style="color: var(--text-muted);">Status: {% if app.is_open %}🟢 Open{% else %}🔴 Closed{% endif %} | Questions: {{ app.questions|length }}</small>
+                    </div>
+                    <form method="POST">
+                        <input type="hidden" name="form_type" value="delete_app">
+                        <input type="hidden" name="delete_app_id" value="{{ app.app_id }}">
+                        <button type="submit" class="danger" style="margin:0; padding: 8px 15px; font-size: 13px;">Delete</button>
+                    </form>
                 </div>
-                <form method="POST">
-                    <input type="hidden" name="form_type" value="delete_app">
-                    <input type="hidden" name="delete_app_id" value="{{ app.app_id }}">
-                    <button type="submit" class="danger" style="margin:0; padding: 8px 15px; font-size: 13px;">Delete</button>
-                </form>
+                <div style="background-color: var(--bg-main); padding: 10px; border-radius: 4px; font-size: 13px; color: var(--text-muted);">
+                    {% for q in app.questions %}
+                    <div>{{ loop.index }}. {{ q }}</div>
+                    {% endfor %}
+                </div>
             </div>
             {% endfor %}
             {% if not settings.applications %}
-            <small style="color: var(--text-muted);">
-    	    	Status: {% if app.is_open %}🟢 Open{% else %}🔴 Closed{% endif %} | Questions: {{ app.questions|length }}<br>
-    	    	{% for q in app.questions %}{{ loop.index }}. {{ q }}<br>{% endfor %}
-	    </small>
+            <p style="color:var(--text-muted); font-size:14px;">No applications created yet.</p>
             {% endif %}
         </div>
     </div>
