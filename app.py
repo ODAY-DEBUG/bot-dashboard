@@ -144,6 +144,7 @@ def guild_dashboard(guild_id):
                 }},
                 upsert=True
             )
+
         elif form_type == "create_app":
             app_id = request.form.get("app_id").lower().replace(" ", "-")
             app_name = request.form.get("app_name")
@@ -173,8 +174,6 @@ def guild_dashboard(guild_id):
             
             app_config = db["applications_config"].find_one({"guild_id": guild_id, "app_id": app_id})
             if app_config and panel_channel_id:
-                # Use bot API to send the panel message with the Apply button
-                import json
                 component = {
                     "type": 1, "components": [{
                         "type": 2, "label": f"Apply for {app_config['app_name']}", 
@@ -207,14 +206,14 @@ def guild_dashboard(guild_id):
     channels = chans_res.json() if chans_res.status_code == 200 else []
     text_channels = [c for c in channels if c["type"] == 0]
 
-        # Fetch Settings
+    # Fetch Settings
     settings = {
         "autorole": db["autorole_settings"].find_one({"guild_id": guild_id}),
         "welcome": db["welcome_settings"].find_one({"guild_id": guild_id}),
         "logging": db["log_settings"].find_one({"guild_id": guild_id}),
         "automod": db["automod_settings"].find_one({"guild_id": guild_id}),
-        "config": db["bot_config"].find_one({"guild_id": guild_id}), # <-- Added comma here
-        "applications": list(db["applications_config"].find({"guild_id": guild_id})) # <-- Moved inside!
+        "config": db["bot_config"].find_one({"guild_id": guild_id}),
+        "applications": list(db["applications_config"].find({"guild_id": guild_id}))
     }
     
     guild_name = "Unknown Server"
