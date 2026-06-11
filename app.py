@@ -144,11 +144,59 @@ def guild_dashboard(guild_id):
                 }},
                 upsert=True
             )
+        elif form_type == "create_app":
+            app_id = request.form.get("app_id").lower().replace(" ", "-")
+            app_name = request.form.get("app_name")
+            questions = [request.form.get(f"q{i}") for i in range(1, 6) if request.form.get(f"q{i}")]
+            is_open = request.form.get("is_open") == "on"
+            submitted_channel_id = request.form.get("submitted_channel_id")
+            accepted_channel_id = request.form.get("accepted_channel_id")
+            denied_channel_id = request.form.get("denied_channel_id")
+            
+            if app_id and app_name and questions:
+                db["applications_config"].update_one(
+                    {"guild_id": guild_id, "app_id": app_id},
+                    {"$set": {
+                        "app_name": app_name,
+                        "questions": questions,
+                        "is_open": is_open,
+                        "submitted_channel_id": int(submitted_channel_id) if submitted_channel_id and submitted_channel_id != "none" else None,
+                        "accepted_channel_id": int(accepted_channel_id) if accepted_channel_id and accepted_channel_id != "none" else None,
+                        "denied_channel_id": int(denied_channel_id) if denied_channel_id and denied_channel_id != "none" else None
+                    }},
+                    upsert=True
+                )
+
+        elif form_type == "send_app_panel":
+            app_id = request.form.get("panel_app_id")
+            panel_channel_id = request.form.get("panel_channel_id")
+            
+            app_config = db["applications_config"].find_one({"guild_id": guild_id, "app_id": app_id})
+            if app_config and panel_channel_id:
+                # Use bot API to send the panel message with the Apply button
+                import json
+                component = {
+                    "type": 1, "components": [{
+                        "type": 2, "label": f"Apply for {app_config['app_name']}", 
+                        "style": 1, "custom_id": f"apply_{app_id}"
+                    }]
+                }
+                requests.post(
+                    f"https://discord.com/api/v10/channels/{panel_channel_id}/messages",
+                    headers={"Authorization": f"Bot {BOT_TOKEN}"},
+                    json={"content": f"**{app_config['app_name']}**\nClick the button below to apply!", "components": [component]}
+                )
+
+        elif form_type == "delete_app":
+            app_id = request.form.get("delete_app_id")
+            if app_id:
+                db["applications_config"].delete_one({"guild_id": guild_id, "app_id": app_id})
             
         return redirect(f"/dashboard/{guild_id}")
 
     # GET Request: Fetch Data for Display
     bot_headers = {"Authorization": f"Bot {BOT_TOKEN}"}
+    "applications": list(db["applications_config"].find({"guild_id": guild_id}))
     
     # Fetch Roles
     roles_res = requests.get(f"https://discord.com/api/v10/guilds/{guild_id}/roles", headers=bot_headers)
