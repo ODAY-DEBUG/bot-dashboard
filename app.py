@@ -9,14 +9,17 @@ load_dotenv()
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET", "make_up_a_random_string_here")
 
+# Force Flask to use secure cookies for HTTPS (Render)
 app.config['SESSION_COOKIE_SECURE'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 
+# Discord OAuth2 Config
 CLIENT_ID = os.getenv("CLIENT_ID")
 CLIENT_SECRET = os.getenv("CLIENT_SECRET")
 REDIRECT_URI = os.getenv("REDIRECT_URI")
-BOT_TOKEN = os.getenv("DISCORD_BOT_TOKEN") # Needed to fetch roles/channels
+BOT_TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 
+# Connect to MongoDB
 MONGO_URI = os.getenv("MONGO_URI")
 mongo_client = MongoClient(MONGO_URI)
 db = mongo_client["discord_bot"] 
@@ -32,24 +35,32 @@ def login():
 @app.route("/callback")
 def callback():
     code = request.args.get("code")
-    if not code: return redirect("/")
+    if not code:
+        return redirect("/")
 
     data = {
-        "client_id": CLIENT_ID, "client_secret": CLIENT_SECRET,
-        "grant_type": "authorization_code", "code": code, "redirect_uri": REDIRECT_URI, "scope": "identify guilds"
+        "client_id": CLIENT_ID,
+        "client_secret": CLIENT_SECRET,
+        "grant_type": "authorization_code",
+        "code": code,
+        "redirect_uri": REDIRECT_URI,
+        "scope": "identify guilds"
     }
     headers = {"Content-Type": "application/x-www-form-urlencoded"}
     
     response = requests.post("https://discord.com/api/oauth2/token", data=data, headers=headers)
     tokens = response.json()
 
-    if "access_token" not in tokens: return redirect("/")
+    if "access_token" not in tokens:
+        return redirect("/")
 
     session["access_token"] = tokens["access_token"]
+
     guild_response = requests.get("https://discord.com/api/users/@me/guilds", headers={"Authorization": f"Bearer {session['access_token']}"})
     guilds = guild_response.json()
 
-    if not isinstance(guilds, list): return redirect("/")
+    if not isinstance(guilds, list):
+        return redirect("/")
 
     manageable_guilds = [g for g in guilds if (int(g.get("permissions", 0)) & 0x8) == 0x8 or (int(g.get("permissions", 0)) & 0x20) == 0x20]
     session["guilds"] = manageable_guilds
@@ -57,12 +68,14 @@ def callback():
 
 @app.route("/dashboard")
 def dashboard():
-    if "access_token" not in session: return redirect("/")
+    if "access_token" not in session:
+        return redirect("/")
     return render_template("dashboard.html", guilds=session.get("guilds", []))
 
 @app.route("/dashboard/<int:guild_id>", methods=["GET", "POST"])
 def guild_dashboard(guild_id):
-    if "access_token" not in session: return redirect("/")
+    if "access_token" not in session:
+        return redirect("/")
 
     # Handle Saving Settings
     if request.method == "POST":
@@ -95,18 +108,18 @@ def guild_dashboard(guild_id):
             block_invites = request.form.get("block_invites") == "on"
             banned_words = [w.strip() for w in request.form.get("banned_words", "").split(",") if w.strip()]
             active_channels = request.form.getlist("automod_channels")
-            active_channels = [int(c) for c in active_channels] # Convert to int
+            active_channels = [int(c) for c in active_channels]
             
             db["automod_settings"].update_one(
                 {"guild_id": guild_id}, 
                 {"$set": {"block_links": block_links, "block_invites": block_invites, "banned_words": banned_words, "active_channels": active_channels}}, 
                 upsert=True
             )
-	elif form_type == "announcement":
+            
+        elif form_type == "announcement":
             channel_id = request.form.get("announcement_channel_id")
             message = request.form.get("announcement_message")
             if channel_id and message:
-                # Use the Bot Token to send a message to the selected channel
                 requests.post(
                     f"https://discord.com/api/v10/channels/{channel_id}/messages",
                     headers={"Authorization": f"Bot {BOT_TOKEN}"},
@@ -140,24 +153,27 @@ def guild_dashboard(guild_id):
     # Fetch Roles
     roles_res = requests.get(f"https://discord.com/api/v10/guilds/{guild_id}/roles", headers=bot_headers)
     roles = roles_res.json() if roles_res.status_code == 200 else []
-    roles = [r for r in roles if r["name"] != "@everyone" and not r["managed"]] # Filter @everyone and bots
+    roles = [r for r in roles if r["name"] != "@everyone" and not r["managed"]]
     
     # Fetch Channels
     chans_res = requests.get(f"https://discord.com/api/v10/guilds/{guild_id}/channels", headers=bot_headers)
     channels = chans_res.json() if chans_res.status_code == 200 else []
-    text_channels = [c for c in channels if c["type"] == 0] # Type 0 is text channel
+    text_channels = [c for c in channels if c["type"] == 0]
 
     # Fetch Settings
     settings = {
         "autorole": db["autorole_settings"].find_one({"guild_id": guild_id}),
         "welcome": db["welcome_settings"].find_one({"guild_id": guild_id}),
         "logging": db["log_settings"].find_one({"guild_id": guild_id}),
-        "automod": db["automod_settings"].find_one({"guild_id": guild_id})
+        "automod": db["automod_settings"].find_one({"guild_id": guild_id}),
+        "config": db["bot_config"].find_one({"guild_id": guild_id})
     }
     
     guild_name = "Unknown Server"
     for g in session.get("guilds", []):
-        if int(g["id"]) == guild_id: guild_name = g["name"]; break
+        if int(g["id"]) == guild_id:
+            guild_name = g["name"]
+            break
 
     return render_template("settings.html", guild_id=guild_id, guild_name=guild_name, roles=roles, channels=text_channels, settings=settings)
 
