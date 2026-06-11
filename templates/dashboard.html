@@ -2,17 +2,10 @@
 <html>
 <head>
     <title>Servers</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <style>
-        body { background-color: #2b2d31; color: #dbdee1; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: center; padding-top: 50px; }
-        h1 { color: white; }
-        .grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 20px; padding: 20px; }
-        .server-card { background-color: #313338; padding: 20px; border-radius: 10px; width: 200px; border: 1px solid #3f4147; transition: 0.2s; }
-        .server-card:hover { border-color: #5865F2; transform: translateY(-2px); }
-        .icon { width: 80px; height: 80px; border-radius: 50%; background-color: #5865F2; margin: 0 auto 10px; line-height: 80px; font-size: 30px; font-weight: bold; }
-        img.icon { background-color: transparent; object-fit: cover; }
-        h3 { margin: 10px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        a { color: #5865F2; text-decoration: none; font-weight: 600; }
-        a:hover { text-decoration: underline; }
+        body { display: block; height: auto; text-align: center; padding-top: 50px; }
+        h1 { color: var(--text-main); margin-bottom: 30px; }
     </style>
 </head>
 <body>
@@ -21,12 +14,12 @@
         {% for guild in guilds %}
             <div class="server-card">
                 {% if guild.icon %}
-                <img class="icon" src="https://cdn.discordapp.com/icons/{{ guild.id }}/{{ guild.icon }}.png" alt="Icon">
+                <img class="server-icon" src="https://cdn.discordapp.com/icons/{{ guild.id }}/{{ guild.icon }}.png" alt="Icon">
                 {% else %}
-                <div class="icon">{{ guild.name[0] }}</div>
+                <div class="server-icon">{{ guild.name[0] }}</div>
                 {% endif %}
                 <h3>{{ guild.name }}</h3>
-                <a href="/dashboard/{{ guild.id }}">Manage Settings</a>
+                <a href="/dashboard/{{ guild.id }}" class="manage-link">Manage Settings</a>
             </div>
         {% endfor %}
     </div>

@@ -4,45 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ guild_name }} Dashboard</title>
-    <style>
-        :root {
-            --bg-main: #2b2d31; --bg-sidebar: #1e1f22; --bg-card: #313338;
-            --accent: #5865F2; --accent-hover: #4752c4; --text-main: #dbdee1;
-            --text-muted: #949ba4; --border: #3f4147; --input-bg: #383a40;
-        }
-        body { margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg-main); color: var(--text-main); display: flex; height: 100vh; overflow: hidden; }
-        .sidebar { width: 250px; background-color: var(--bg-sidebar); padding: 20px 0; display: flex; flex-direction: column; border-right: 1px solid var(--border); }
-        .sidebar h2 { padding: 0 20px 20px; margin: 0; border-bottom: 1px solid var(--border); color: var(--text-main); font-size: 18px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .nav-item { padding: 12px 20px; cursor: pointer; transition: 0.2s; color: var(--text-muted); font-weight: 500; border-left: 3px solid transparent; }
-        .nav-item:hover { background-color: var(--bg-main); color: var(--text-main); }
-        .nav-item.active { background-color: var(--bg-main); color: var(--accent); border-left-color: var(--accent); }
-        .content { flex: 1; padding: 40px; overflow-y: auto; }
-        .card { background-color: var(--bg-card); padding: 25px; border-radius: 8px; margin-bottom: 20px; border: 1px solid var(--border); display: none; }
-        .card.active { display: block; }
-        .card h3 { margin-top: 0; color: var(--text-main); border-bottom: 1px solid var(--border); padding-bottom: 10px; }
-        .form-group { margin-bottom: 20px; }
-        .form-group label { display: block; margin-bottom: 8px; font-weight: 600; color: var(--text-muted); font-size: 14px; text-transform: uppercase; }
-        select, input[type="text"], textarea { width: 100%; padding: 10px; border-radius: 6px; border: none; background-color: var(--input-bg); color: var(--text-main); outline: none; font-size: 14px; }
-        select:focus, input[type="text"]:focus, textarea:focus { border: 2px solid var(--accent); }
-        textarea { resize: vertical; min-height: 80px; }
-        .checkbox-group { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
-        .checkbox-group input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--accent); cursor: pointer; }
-        button { background-color: var(--accent); color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 15px; transition: 0.2s; }
-        button:hover { background-color: var(--accent-hover); }
-        .back-link { color: var(--text-muted); text-decoration: none; display: block; margin-bottom: 20px; font-size: 14px; }
-        .back-link:hover { color: var(--accent); }
-        .multiselect-container { height: 150px; overflow-y: auto; background-color: var(--input-bg); border-radius: 6px; padding: 10px; }
-        .multiselect-container label { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; text-transform: none; font-weight: normal; font-size: 14px; cursor: pointer; }
-    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
 
 <div class="sidebar">
     <h2>{{ guild_name }}</h2>
-    <div class="nav-item active" onclick="switchTab('autorole')">🤖 Autorole</div>
-    <div class="nav-item" onclick="switchTab('welcome')">👋 Welcome</div>
-    <div class="nav-item" onclick="switchTab('logging')">📜 Logging</div>
-    <div class="nav-item" onclick="switchTab('automod')">🛡️ AutoMod</div>
+    <div class="nav-item active" onclick="switchTab('autorole', this)">🤖 Autorole</div>
+    <div class="nav-item" onclick="switchTab('welcome', this)">👋 Welcome</div>
+    <div class="nav-item" onclick="switchTab('logging', this)">📜 Logging</div>
+    <div class="nav-item" onclick="switchTab('automod', this)">🛡️ AutoMod</div>
 </div>
 
 <div class="content">
@@ -51,15 +22,15 @@
     <!-- AUTOROLE CARD -->
     <div id="autorole" class="card active">
         <h3>Autorole</h3>
-        <p style="color:var(--text-muted);">Set the role given to new members when they join.</p>
+        <p>Set the role given to new members when they join.</p>
         <form method="POST">
             <input type="hidden" name="form_type" value="autorole">
             <div class="form-group">
                 <label>Assign Role</label>
                 <select name="autorole_id">
-                    <option value="" disabled>Select a role...</option>
+                    <option value="none" {% if not settings.autorole %}selected{% endif %}>Disabled</option>
                     {% for role in roles|sort(attribute='position', reverse=True) %}
-                    <option value="{{ role.id }}" {% if settings.autorole and settings.autorole.role_id == role.id %}selected{% endif %}>
+                    <option value="{{ role.id }}" {% if settings.autorole and settings.autorole.role_id|string == role.id|string %}selected{% endif %}>
                         {{ role.name }}
                     </option>
                     {% endfor %}
@@ -72,15 +43,15 @@
     <!-- WELCOME CARD -->
     <div id="welcome" class="card">
         <h3>Welcome Messages</h3>
-        <p style="color:var(--text-muted);">Send a message when a new member joins. Use {user}, {server}, {member_count}.</p>
+        <p>Send a message when a new member joins. Use {user}, {server}, {member_count}.</p>
         <form method="POST">
             <input type="hidden" name="form_type" value="welcome">
             <div class="form-group">
                 <label>Welcome Channel</label>
                 <select name="welcome_channel_id">
-                    <option value="" disabled>Select a channel...</option>
+                    <option value="none" {% if not settings.welcome %}selected{% endif %}>Disabled</option>
                     {% for channel in channels|sort(attribute='position') %}
-                    <option value="{{ channel.id }}" {% if settings.welcome and settings.welcome.channel_id == channel.id %}selected{% endif %}>
+                    <option value="{{ channel.id }}" {% if settings.welcome and settings.welcome.channel_id|string == channel.id|string %}selected{% endif %}>
                         # {{ channel.name }}
                     </option>
                     {% endfor %}
@@ -97,15 +68,15 @@
     <!-- LOGGING CARD -->
     <div id="logging" class="card">
         <h3>Event Logging</h3>
-        <p style="color:var(--text-muted);">Log deleted messages, edits, and joins/leaves.</p>
+        <p>Log deleted messages, edits, and joins/leaves.</p>
         <form method="POST">
             <input type="hidden" name="form_type" value="logging">
             <div class="form-group">
                 <label>Log Channel</label>
                 <select name="log_channel_id">
-                    <option value="" disabled>Select a channel...</option>
+                    <option value="none" {% if not settings.logging %}selected{% endif %}>Disabled</option>
                     {% for channel in channels|sort(attribute='position') %}
-                    <option value="{{ channel.id }}" {% if settings.logging and settings.logging.channel_id == channel.id %}selected{% endif %}>
+                    <option value="{{ channel.id }}" {% if settings.logging and settings.logging.channel_id|string == channel.id|string %}selected{% endif %}>
                         # {{ channel.name }}
                     </option>
                     {% endfor %}
@@ -118,7 +89,7 @@
     <!-- AUTOMOD CARD -->
     <div id="automod" class="card">
         <h3>Auto Moderation</h3>
-        <p style="color:var(--text-muted);">Automatically delete links, invites, and bad words.</p>
+        <p>Automatically delete links, invites, and bad words.</p>
         <form method="POST">
             <input type="hidden" name="form_type" value="automod">
             
@@ -142,7 +113,7 @@
                 <div class="multiselect-container">
                     {% for channel in channels|sort(attribute='position') %}
                     <label>
-                        <input type="checkbox" name="automod_channels" value="{{ channel.id }}" {% if settings.automod and channel.id in settings.automod.active_channels %}checked{% endif %}>
+                        <input type="checkbox" name="automod_channels" value="{{ channel.id }}" {% if settings.automod and channel.id|string in settings.automod.active_channels|string %}checked{% endif %}>
                         # {{ channel.name }}
                     </label>
                     {% endfor %}
@@ -156,16 +127,12 @@
 </div>
 
 <script>
-    function switchTab(tabId) {
-        // Hide all cards
+    function switchTab(tabId, element) {
         document.querySelectorAll('.card').forEach(card => card.classList.remove('active'));
-        // Remove active from nav
         document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
         
-        // Show selected card
         document.getElementById(tabId).classList.add('active');
-        // Highlight nav
-        event.currentTarget.classList.add('active');
+        element.classList.add('active');
     }
 </script>
 

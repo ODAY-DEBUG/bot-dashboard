@@ -70,19 +70,25 @@ def guild_dashboard(guild_id):
         
         if form_type == "autorole":
             role_id = request.form.get("autorole_id")
-            if role_id:
+            if role_id and role_id != "none":
                 db["autorole_settings"].update_one({"guild_id": guild_id}, {"$set": {"role_id": int(role_id)}}, upsert=True)
+            elif role_id == "none":
+                db["autorole_settings"].delete_one({"guild_id": guild_id})
                 
         elif form_type == "welcome":
             channel_id = request.form.get("welcome_channel_id")
             message = request.form.get("welcome_message")
-            if channel_id:
+            if channel_id and channel_id != "none":
                 db["welcome_settings"].update_one({"guild_id": guild_id}, {"$set": {"channel_id": int(channel_id), "message": message}}, upsert=True)
+            elif channel_id == "none":
+                db["welcome_settings"].delete_one({"guild_id": guild_id})
                 
         elif form_type == "logging":
             channel_id = request.form.get("log_channel_id")
-            if channel_id:
+            if channel_id and channel_id != "none":
                 db["log_settings"].update_one({"guild_id": guild_id}, {"$set": {"channel_id": int(channel_id)}}, upsert=True)
+            elif channel_id == "none":
+                db["log_settings"].delete_one({"guild_id": guild_id})
                 
         elif form_type == "automod":
             block_links = request.form.get("block_links") == "on"
