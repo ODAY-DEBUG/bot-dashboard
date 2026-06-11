@@ -176,14 +176,29 @@ def guild_dashboard(guild_id):
             if app_config and panel_channel_id:
                 component = {
                     "type": 1, "components": [{
-                        "type": 2, "label": f"Apply for {app_config['app_name']}", 
-                        "style": 1, "custom_id": f"apply_{app_id}"
+                        "type": 2, 
+                        "label": f"Apply for {app_config['app_name']}", 
+                        "style": 1, 
+                        "custom_id": f"apply_{app_id}",
+                        "emoji": {"name": "📝"}
                     }]
                 }
+                
+                # Beautiful Embed payload
+                embed_payload = {
+                    "title": f"📝 {app_config['app_name']}",
+                    "description": "Click the button below to start your application. You will receive a DM from the bot to fill out the questions.",
+                    "color": 0x5865F2, # Blurple color
+                    "footer": {"text": f"App ID: {app_id}"}
+                }
+                
                 requests.post(
                     f"https://discord.com/api/v10/channels/{panel_channel_id}/messages",
                     headers={"Authorization": f"Bot {BOT_TOKEN}"},
-                    json={"content": f"**{app_config['app_name']}**\nClick the button below to apply!", "components": [component]}
+                    json={
+                        "embeds": [embed_payload], 
+                        "components": [component]
+                    }
                 )
 
         elif form_type == "delete_app":
