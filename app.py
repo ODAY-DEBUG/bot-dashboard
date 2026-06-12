@@ -54,7 +54,11 @@ def callback():
         "redirect_uri": REDIRECT_URI,
         "scope": "identify guilds"
     }
-    headers = {"Content-Type": "application/x-www-form-urlencoded"}
+    # Custom headers with User-Agent to prevent Discord IP blocks
+    headers = {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) DashboardBot/1.0"
+    }
     
     response = requests.post("https://discord.com/api/oauth2/token", data=data, headers=headers)
     tokens = response.json()
