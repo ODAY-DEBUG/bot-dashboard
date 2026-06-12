@@ -229,15 +229,22 @@ def guild_dashboard(guild_id):
         return redirect(f"/dashboard/{guild_id}")
 
     # GET Request: Fetch Data for Display
+    if not BOT_TOKEN:
+        return "<h1>Error: DISCORD_BOT_TOKEN is missing from Render Environment Variables!</h1>", 500
+
     bot_headers = {"Authorization": f"Bot {BOT_TOKEN}", "User-Agent": "DashboardBot/1.0"}
     
     # Fetch Roles
     roles_res = requests.get(f"https://discord.com/api/v10/guilds/{guild_id}/roles", headers=bot_headers)
+    if roles_res.status_code != 200:
+        print(f"❌ ROLES FETCH FAILED: {roles_res.status_code} - {roles_res.text}")
     roles = roles_res.json() if roles_res.status_code == 200 else []
     roles = [r for r in roles if r["name"] != "@everyone" and not r["managed"]]
     
     # Fetch Channels
     chans_res = requests.get(f"https://discord.com/api/v10/guilds/{guild_id}/channels", headers=bot_headers)
+    if chans_res.status_code != 200:
+        print(f"❌ CHANNELS FETCH FAILED: {chans_res.status_code} - {chans_res.text}")
     channels = chans_res.json() if chans_res.status_code == 200 else []
     text_channels = [c for c in channels if c["type"] == 0]
 
