@@ -319,6 +319,26 @@ def guild_dashboard(guild_id):
                         "components": [component]
                     }
                 )
+        elif form_type == "save_cmd_perms":
+            # Iterate through all incoming form fields
+            for key, value in request.form.items():
+                if key.startswith("cmd_"):
+                    command_name = key[4:] # Remove 'cmd_' prefix
+                    # Value is a comma-separated string of role names
+                    roles = [r.strip() for r in value.split(",") if r.strip()]
+                    
+                    if roles:
+                        db["command_perms"].update_one(
+                            {"guild_id": guild_id, "command_name": command_name},
+                            {"$set": {"roles": roles}},
+                            upsert=True
+                        )
+                    else:
+                        # If no roles selected, delete the override so default bot checks take over
+                        db["command_perms"].delete_one({
+                            "guild_id": guild_id, 
+                            "command_name": command_name
+                        })
 
         elif form_type == "delete_app":
             app_id = request.form.get("delete_app_id")
