@@ -35,16 +35,18 @@ def login():
 @app.route("/callback")
 def callback():
     code = request.args.get("code")
-    if not code:
-        return "Error: No code provided by Discord.", 400
 
-    # Use Flask's logger so it 100% shows up in Render logs
-    app.logger.info(f"--- DEBUGGING LOGIN ---")
-    app.logger.info(f"CLIENT_ID: {CLIENT_ID}")
-    app.logger.info(f"CLIENT_SECRET is loaded: {'Yes' if CLIENT_SECRET else 'NO! MISSING!'}")
-    app.logger.info(f"REDIRECT_URI: {REDIRECT_URI}")
-    app.logger.info(f"CODE FROM DISCORD: {code}")
-    app.logger.info(f"-----------------------")
+    if not code:
+        return "No code received from Discord", 400
+
+    print("=" * 80)
+    print("DISCORD OAUTH DEBUG")
+    print("=" * 80)
+    print("CLIENT_ID:", CLIENT_ID)
+    print("CLIENT_SECRET LOADED:", bool(CLIENT_SECRET))
+    print("REDIRECT_URI:", REDIRECT_URI)
+    print("CODE:", code)
+    print("=" * 80)
 
     data = {
         "client_id": CLIENT_ID,
@@ -54,49 +56,129 @@ def callback():
         "redirect_uri": REDIRECT_URI,
         "scope": "identify guilds"
     }
-    # Custom headers with User-Agent to prevent Discord IP blocks
+
     headers = {
         "Content-Type": "application/x-www-form-urlencoded",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) DashboardBot/1.0"
+        "User-Agent": "DashboardBot/1.0"
     }
-    
-    response = requests.post("https://discord.com/api/oauth2/token", data=data, headers=headers)
-    tokens = response.json()
 
-    # Log the exact response
-    app.logger.error(f"DISCORD RESPONSE: {tokens}")
+    try:
+        response = requests.post(
+            "https://discord.com/api/oauth2/token",
+            data=data,
+            headers=headers,
+            timeout=30
+        )
 
-    if "access_token" not in tokens:
-        error_desc = tokens.get("error_description", tokens.get("error", "Unknown error"))
-        error_name = tokens.get("error", "N/A")
-        
-        # Put ALL the debug info right on the webpage so we can't miss it
-        debug_html = f"""
-        <h1>Login Failed</h1>
-        <p><b>Discord Error:</b> {error_name}</p>
-        <p><b>Description:</b> {error_desc}</p>
-        <hr>
-        <h3>Debug Info:</h3>
-        <ul>
-            <li>Client ID: {CLIENT_ID}</li>
-            <li>Client Secret Loaded: {'Yes' if CLIENT_SECRET else 'NO!'}</li>
-            <li>Redirect URI: {REDIRECT_URI}</li>
-            <li>Code received: {code}</li>
-        </ul>
-        """
-        return debug_html, 400
+        print("\nTOKEN REQUEST RESULTS")
+        print("=" * 80)
+        print("STATUS CODE:", response.status_code)
+        print("=" * 80)
 
-    session["access_token"] = tokens["access_token"]
+        print("\nHEADERS:")
+        for k, v in response.headers.items():
+            print(f"{k}: {v}")
 
-    guild_response = requests.get("https://discord.com/api/users/@me/guilds", headers={"Authorization": f"Bearer {session['access_token']}"})
-    guilds = guild_response.json()
+        print("\nRAW BODY:")
+        print(response.text)
 
-    if not isinstance(guilds, list):
-        return "Failed to fetch user guilds from Discord.", 400
+        print("=" * 80)
 
-    manageable_guilds = [g for g in guilds if (int(g.get("permissions", 0)) & 0x8) == 0x8 or (int(g.get("permissions", 0)) & 0x20) == 0x20]
-    session["guilds"] = manageable_guilds
-    return redirect("/dashboard")
+        try:
+            tokens = response.json()
+            print("\nJSON:")
+            print(tokens)
+        except Exception as e:
+            print("JSON PARSE ERROR:", e)
+            return f"JSON Parse Error: {e}", 500
+
+        if response.status_code == 429:
+            return f"""
+            <h1>RATE LIMITED</h1>
+            <pre>
+Status: {response.status_code}
+
+Headers:
+{dict(response.headers)}
+
+Body:
+{response.text}
+            </pre>
+            """, 429
+
+        if "access_token" not in tokens:
+            return f"""
+            <h1>DISCORD ERROR</h1>
+            <pre>
+Status: {response.status_code}
+
+Headers:
+{dict(response.headers)}
+
+Body:
+{response.text}
+            </pre>
+            """, 400
+
+        session["access_token"] = tokens["access_token"]
+
+        user_response = requests.get(
+            "https://discord.com/api/users/@me",
+            headers={
+                "Authorization": f"Bearer {tokens['access_token']}"
+            }
+        )
+
+        print("\nUSER RESPONSE:")
+        print(user_response.status_code)
+        print(user_response.text)
+
+        guild_response = requests.get(
+            "https://discord.com/api/users/@me/guilds",
+            headers={
+                "Authorization": f"Bearer {tokens['access_token']}"
+            }
+        )
+
+        print("\nGUILDS RESPONSE:")
+        print(guild_response.status_code)
+        print(guild_response.text)
+
+        guilds = guild_response.json()
+
+        if not isinstance(guilds, list):
+            return f"""
+            <h1>GUILD FETCH FAILED</h1>
+            <pre>
+Status: {guild_response.status_code}
+
+Body:
+{guild_response.text}
+            </pre>
+            """, 400
+
+        manageable_guilds = [
+            g for g in guilds
+            if (int(g.get("permissions", 0)) & 0x8) == 0x8
+            or (int(g.get("permissions", 0)) & 0x20) == 0x20
+        ]
+
+        session["guilds"] = manageable_guilds
+
+        return redirect("/dashboard")
+
+    except Exception as e:
+        import traceback
+
+        print("\nEXCEPTION:")
+        print(traceback.format_exc())
+
+        return f"""
+        <h1>EXCEPTION</h1>
+        <pre>
+{traceback.format_exc()}
+        </pre>
+        """, 500
 
 
 @app.route("/dashboard")
