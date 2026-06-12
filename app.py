@@ -35,18 +35,8 @@ def login():
 @app.route("/callback")
 def callback():
     code = request.args.get("code")
-
     if not code:
-        return "No code received from Discord", 400
-
-    print("=" * 80)
-    print("DISCORD OAUTH DEBUG")
-    print("=" * 80)
-    print("CLIENT_ID:", CLIENT_ID)
-    print("CLIENT_SECRET LOADED:", bool(CLIENT_SECRET))
-    print("REDIRECT_URI:", REDIRECT_URI)
-    print("CODE:", code)
-    print("=" * 80)
+        return redirect("/")
 
     data = {
         "client_id": CLIENT_ID,
@@ -56,130 +46,36 @@ def callback():
         "redirect_uri": REDIRECT_URI,
         "scope": "identify guilds"
     }
-
+    
+    # User-Agent fix to prevent Discord API blocks on cloud hosts
     headers = {
         "Content-Type": "application/x-www-form-urlencoded",
-        "User-Agent": "DashboardBot/1.0"
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) DashboardBot/1.0"
     }
+    
+    response = requests.post("https://discord.com/api/oauth2/token", data=data, headers=headers)
+    tokens = response.json()
 
-    try:
-        response = requests.post(
-            "https://discord.com/api/oauth2/token",
-            data=data,
-            headers=headers,
-            timeout=30
-        )
+    if "access_token" not in tokens:
+        return redirect("/")
 
-        print("\nTOKEN REQUEST RESULTS")
-        print("=" * 80)
-        print("STATUS CODE:", response.status_code)
-        print("=" * 80)
+    session["access_token"] = tokens["access_token"]
 
-        print("\nHEADERS:")
-        for k, v in response.headers.items():
-            print(f"{k}: {v}")
+    guild_response = requests.get(
+        "https://discord.com/api/users/@me/guilds", 
+        headers={
+            "Authorization": f"Bearer {session['access_token']}",
+            "User-Agent": "DashboardBot/1.0"
+        }
+    )
+    guilds = guild_response.json()
 
-        print("\nRAW BODY:")
-        print(response.text)
+    if not isinstance(guilds, list):
+        return redirect("/")
 
-        print("=" * 80)
-
-        try:
-            tokens = response.json()
-            print("\nJSON:")
-            print(tokens)
-        except Exception as e:
-            print("JSON PARSE ERROR:", e)
-            return f"JSON Parse Error: {e}", 500
-
-        if response.status_code == 429:
-            return f"""
-            <h1>RATE LIMITED</h1>
-            <pre>
-Status: {response.status_code}
-
-Headers:
-{dict(response.headers)}
-
-Body:
-{response.text}
-            </pre>
-            """, 429
-
-        if "access_token" not in tokens:
-            return f"""
-            <h1>DISCORD ERROR</h1>
-            <pre>
-Status: {response.status_code}
-
-Headers:
-{dict(response.headers)}
-
-Body:
-{response.text}
-            </pre>
-            """, 400
-
-        session["access_token"] = tokens["access_token"]
-
-        user_response = requests.get(
-            "https://discord.com/api/users/@me",
-            headers={
-                "Authorization": f"Bearer {tokens['access_token']}"
-            }
-        )
-
-        print("\nUSER RESPONSE:")
-        print(user_response.status_code)
-        print(user_response.text)
-
-        guild_response = requests.get(
-            "https://discord.com/api/users/@me/guilds",
-            headers={
-                "Authorization": f"Bearer {tokens['access_token']}"
-            }
-        )
-
-        print("\nGUILDS RESPONSE:")
-        print(guild_response.status_code)
-        print(guild_response.text)
-
-        guilds = guild_response.json()
-
-        if not isinstance(guilds, list):
-            return f"""
-            <h1>GUILD FETCH FAILED</h1>
-            <pre>
-Status: {guild_response.status_code}
-
-Body:
-{guild_response.text}
-            </pre>
-            """, 400
-
-        manageable_guilds = [
-            g for g in guilds
-            if (int(g.get("permissions", 0)) & 0x8) == 0x8
-            or (int(g.get("permissions", 0)) & 0x20) == 0x20
-        ]
-
-        session["guilds"] = manageable_guilds
-
-        return redirect("/dashboard")
-
-    except Exception as e:
-        import traceback
-
-        print("\nEXCEPTION:")
-        print(traceback.format_exc())
-
-        return f"""
-        <h1>EXCEPTION</h1>
-        <pre>
-{traceback.format_exc()}
-        </pre>
-        """, 500
-
+    manageable_guilds = [g for g in guilds if (int(g.get("permissions", 0)) & 0x8) == 0x8 or (int(g.get("permissions", 0)) & 0x20) == 0x20]
+    session["guilds"] = manageable_guilds
+    return redirect("/dashboard")
 
 @app.route("/dashboard")
 def dashboard():
@@ -237,7 +133,7 @@ def guild_dashboard(guild_id):
             if channel_id and message:
                 requests.post(
                     f"https://discord.com/api/v10/channels/{channel_id}/messages",
-                    headers={"Authorization": f"Bot {BOT_TOKEN}"},
+                    headers={"Authorization": f"Bot {BOT_TOKEN}", "User-Agent": "DashboardBot/1.0"},
                     json={"content": message}
                 )
                 
@@ -263,11 +159,8 @@ def guild_dashboard(guild_id):
         elif form_type == "create_app":
             app_id = request.form.get("app_id").lower().replace(" ", "-")
             app_name = request.form.get("app_name")
-            
-            # NEW: Read from a single text box, split by new lines, and remove empty lines
             questions_raw = request.form.get("questions_text", "")
             questions = [q.strip() for q in questions_raw.split("\n") if q.strip()]
-            
             is_open = request.form.get("is_open") == "on"
             submitted_channel_id = request.form.get("submitted_channel_id")
             accepted_channel_id = request.form.get("accepted_channel_id")
@@ -302,31 +195,28 @@ def guild_dashboard(guild_id):
                         "emoji": {"name": "📝"}
                     }]
                 }
-                
-                # Beautiful Embed payload
                 embed_payload = {
                     "title": f"📝 {app_config['app_name']}",
                     "description": "Click the button below to start your application. You will receive a DM from the bot to fill out the questions.",
-                    "color": 0x5865F2, # Blurple color
+                    "color": 0x5865F2,
                     "footer": {"text": f"App ID: {app_id}"}
                 }
-                
                 requests.post(
                     f"https://discord.com/api/v10/channels/{panel_channel_id}/messages",
-                    headers={"Authorization": f"Bot {BOT_TOKEN}"},
-                    json={
-                        "embeds": [embed_payload], 
-                        "components": [component]
-                    }
+                    headers={"Authorization": f"Bot {BOT_TOKEN}", "User-Agent": "DashboardBot/1.0"},
+                    json={"embeds": [embed_payload], "components": [component]}
                 )
+
+        elif form_type == "delete_app":
+            app_id = request.form.get("delete_app_id")
+            if app_id:
+                db["applications_config"].delete_one({"guild_id": guild_id, "app_id": app_id})
+
         elif form_type == "save_cmd_perms":
-            # Iterate through all incoming form fields
             for key, value in request.form.items():
                 if key.startswith("cmd_"):
-                    command_name = key[4:] # Remove 'cmd_' prefix
-                    # Value is a comma-separated string of role names
+                    command_name = key[4:]
                     roles = [r.strip() for r in value.split(",") if r.strip()]
-                    
                     if roles:
                         db["command_perms"].update_one(
                             {"guild_id": guild_id, "command_name": command_name},
@@ -334,21 +224,12 @@ def guild_dashboard(guild_id):
                             upsert=True
                         )
                     else:
-                        # If no roles selected, delete the override so default bot checks take over
-                        db["command_perms"].delete_one({
-                            "guild_id": guild_id, 
-                            "command_name": command_name
-                        })
-
-        elif form_type == "delete_app":
-            app_id = request.form.get("delete_app_id")
-            if app_id:
-                db["applications_config"].delete_one({"guild_id": guild_id, "app_id": app_id})
+                        db["command_perms"].delete_one({"guild_id": guild_id, "command_name": command_name})
             
         return redirect(f"/dashboard/{guild_id}")
 
     # GET Request: Fetch Data for Display
-    bot_headers = {"Authorization": f"Bot {BOT_TOKEN}"}
+    bot_headers = {"Authorization": f"Bot {BOT_TOKEN}", "User-Agent": "DashboardBot/1.0"}
     
     # Fetch Roles
     roles_res = requests.get(f"https://discord.com/api/v10/guilds/{guild_id}/roles", headers=bot_headers)
@@ -367,7 +248,8 @@ def guild_dashboard(guild_id):
         "logging": db["log_settings"].find_one({"guild_id": guild_id}),
         "automod": db["automod_settings"].find_one({"guild_id": guild_id}),
         "config": db["bot_config"].find_one({"guild_id": guild_id}),
-        "applications": list(db["applications_config"].find({"guild_id": guild_id}))
+        "applications": list(db["applications_config"].find({"guild_id": guild_id})),
+        "command_perms": {doc["command_name"]: doc["roles"] for doc in db["command_perms"].find({"guild_id": guild_id})}
     }
     
     guild_name = "Unknown Server"
