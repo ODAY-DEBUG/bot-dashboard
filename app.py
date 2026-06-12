@@ -36,7 +36,7 @@ def login():
 def callback():
     code = request.args.get("code")
     if not code:
-        return redirect("/")
+        return "Error: No code provided by Discord.", 400
 
     data = {
         "client_id": CLIENT_ID,
@@ -51,8 +51,12 @@ def callback():
     response = requests.post("https://discord.com/api/oauth2/token", data=data, headers=headers)
     tokens = response.json()
 
+    # --- DEBUGGING: Force it to show us the error ---
     if "access_token" not in tokens:
-        return redirect("/")
+        error_desc = tokens.get("error_description", tokens.get("error", "Unknown error"))
+        print(f"❌ DISCORD LOGIN FAILED: {tokens}") # Prints to Render Logs
+        return f"<h1>Login Failed</h1><p>Discord said: <b>{error_desc}</b></p><p>Check your Render Logs for more details.</p>", 400
+    # -------------------------------------------------
 
     session["access_token"] = tokens["access_token"]
 
@@ -60,7 +64,8 @@ def callback():
     guilds = guild_response.json()
 
     if not isinstance(guilds, list):
-        return redirect("/")
+        print(f"❌ GUILD FETCH FAILED: {guilds}")
+        return "Failed to fetch user guilds from Discord.", 400
 
     manageable_guilds = [g for g in guilds if (int(g.get("permissions", 0)) & 0x8) == 0x8 or (int(g.get("permissions", 0)) & 0x20) == 0x20]
     session["guilds"] = manageable_guilds
