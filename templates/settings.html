@@ -5,355 +5,291 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ guild_name }} Dashboard</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        :root {
+            --bg-main: #2b2d31; --bg-sidebar: #1e1f22; --bg-card: #313338;
+            --accent: #5865F2; --accent-hover: #4752c4; --text-main: #dbdee1;
+            --text-muted: #949ba4; --border: #3f4147; --input-bg: #383a40;
+        }
+        body { margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg-main); color: var(--text-main); display: flex; height: 100vh; overflow: hidden; }
+        .sidebar { width: 240px; background-color: var(--bg-sidebar); padding: 20px 0; display: flex; flex-direction: column; border-right: 1px solid var(--border); overflow-y: auto; }
+        .sidebar h2 { padding: 0 20px 20px; margin: 0; border-bottom: 1px solid var(--border); color: var(--text-main); font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .nav-category { padding: 10px 20px 5px; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.5px; }
+        .nav-item { padding: 10px 20px; cursor: pointer; transition: 0.2s; color: var(--text-muted); font-weight: 500; font-size: 14px; border-left: 3px solid transparent; }
+        .nav-item:hover { background-color: var(--bg-main); color: var(--text-main); }
+        .nav-item.active { background-color: var(--bg-main); color: var(--accent); border-left-color: var(--accent); }
+        .content { flex: 1; padding: 40px; overflow-y: auto; display: flex; justify-content: center; }
+        .content-inner { width: 100%; max-width: 900px; }
+        .back-link { color: var(--text-muted); text-decoration: none; display: block; margin-bottom: 20px; font-size: 13px; font-weight: 600; }
+        .back-link:hover { color: var(--accent); }
+        .card { background-color: var(--bg-card); padding: 30px; border-radius: 8px; margin-bottom: 20px; border: 1px solid var(--border); display: none; }
+        .card.active { display: block; }
+        .card h3 { margin-top: 0; color: var(--text-main); font-size: 20px; border-bottom: 1px solid var(--border); padding-bottom: 15px; }
+        .card p { color:var(--text-muted); font-size: 14px; margin-top: -10px; margin-bottom: 25px; }
+        .form-group { margin-bottom: 25px; }
+        .form-group label { display: block; margin-bottom: 8px; font-weight: 600; color: var(--text-main); font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; }
+        select, input[type="text"], textarea { width: 100%; padding: 12px; border-radius: 6px; border: 1px solid var(--border); background-color: var(--input-bg); color: var(--text-main); outline: none; font-size: 14px; box-sizing: border-box; transition: border-color 0.2s; }
+        select:focus, input[type="text"]:focus, textarea:focus { border-color: var(--accent); }
+        textarea { resize: vertical; min-height: 100px; }
+        .checkbox-group { display: flex; align-items: center; gap: 12px; margin-bottom: 15px; background-color: var(--input-bg); padding: 12px 16px; border-radius: 6px; border: 1px solid var(--border); }
+        .checkbox-group input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--accent); cursor: pointer; }
+        .checkbox-group label { text-transform: none; font-weight: normal; font-size: 14px; color: var(--text-main); cursor: pointer; flex: 1; }
+        button { background-color: var(--accent); color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 15px; transition: 0.2s; margin-top: 10px; }
+        button:hover { background-color: var(--accent-hover); }
+        .cmd-row { display: flex; justify-content: space-between; align-items: center; background-color: var(--input-bg); padding: 15px; border-radius: 6px; margin-bottom: 10px; border: 1px solid var(--border); }
+        .cmd-row:hover { border-color: var(--accent); }
+        .cmd-name { font-family: monospace; font-size: 15px; color: var(--accent); }
+        .cmd-roles { flex: 1; margin-left: 20px; }
+    </style>
 </head>
 <body>
 
 <div class="sidebar">
     <h2>{{ guild_name }}</h2>
+    
+    <div class="nav-category">Server Setup</div>
     <div class="nav-item active" onclick="switchTab('autorole', this)">🤖 Autorole</div>
     <div class="nav-item" onclick="switchTab('welcome', this)">👋 Welcome</div>
     <div class="nav-item" onclick="switchTab('logging', this)">📜 Logging</div>
+    
+    <div class="nav-category">Moderation</div>
     <div class="nav-item" onclick="switchTab('automod', this)">🛡️ AutoMod</div>
-    <div class="nav-item" onclick="switchTab('announcement', this)">📢 Announcement</div>
-    <div class="nav-item" onclick="switchTab('config', this)">⚙️ Config & Roles</div>
+    <div class="nav-item" onclick="switchTab('config', this)">⚙️ Roles & Config</div>
+    <div class="nav-item" onclick="switchTab('commands', this)">🔑 Commands</div>
+    
+    <div class="nav-category">Tickets & Apps</div>
     <div class="nav-item" onclick="switchTab('applications', this)">📝 Applications</div>
+    
+    <div class="nav-category">Utility</div>
+    <div class="nav-item" onclick="switchTab('announcement', this)">📢 Announcement</div>
 </div>
 
 <div class="content">
-    <a href="/dashboard" class="back-link">← Back to Servers</a>
+    <div class="content-inner">
+        <a href="/dashboard" class="back-link">← Back to Servers</a>
 
-    <!-- AUTOROLE CARD -->
-    <div id="autorole" class="card active">
-        <h3>Autorole</h3>
-        <p>Set the role given to new members when they join.</p>
-        <form method="POST">
-            <input type="hidden" name="form_type" value="autorole">
-            <div class="form-group">
-                <label>Assign Role</label>
-                <select name="autorole_id">
-                    <option value="none" {% if not settings.autorole %}selected{% endif %}>Disabled</option>
-                    {% for role in roles|sort(attribute='position', reverse=True) %}
-                    <option value="{{ role.id }}" {% if settings.autorole and settings.autorole.role_id|string == role.id|string %}selected{% endif %}>
-                        {{ role.name }}
-                    </option>
-                    {% endfor %}
-                </select>
-            </div>
-            <button type="submit">Save Autorole</button>
-        </form>
-    </div>
-
-    <!-- WELCOME CARD -->
-    <div id="welcome" class="card">
-        <h3>Welcome Messages</h3>
-        <p>Send a message when a new member joins. Use {user}, {server}, {member_count}.</p>
-        <form method="POST">
-            <input type="hidden" name="form_type" value="welcome">
-            <div class="form-group">
-                <label>Welcome Channel</label>
-                <select name="welcome_channel_id">
-                    <option value="none" {% if not settings.welcome %}selected{% endif %}>Disabled</option>
-                    {% for channel in channels|sort(attribute='position') %}
-                    <option value="{{ channel.id }}" {% if settings.welcome and settings.welcome.channel_id|string == channel.id|string %}selected{% endif %}>
-                        # {{ channel.name }}
-                    </option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="form-group">
-                <label>Welcome Message</label>
-                <textarea name="welcome_message">{% if settings.welcome %}{{ settings.welcome.message }}{% else %}Welcome {user} to {server}!{% endif %}</textarea>
-            </div>
-            <button type="submit">Save Welcome</button>
-        </form>
-    </div>
-
-    <!-- LOGGING CARD -->
-    <div id="logging" class="card">
-        <h3>Event Logging</h3>
-        <p>Log deleted messages, edits, and joins/leaves.</p>
-        <form method="POST">
-            <input type="hidden" name="form_type" value="logging">
-            <div class="form-group">
-                <label>Log Channel</label>
-                <select name="log_channel_id">
-                    <option value="none" {% if not settings.logging %}selected{% endif %}>Disabled</option>
-                    {% for channel in channels|sort(attribute='position') %}
-                    <option value="{{ channel.id }}" {% if settings.logging and settings.logging.channel_id|string == channel.id|string %}selected{% endif %}>
-                        # {{ channel.name }}
-                    </option>
-                    {% endfor %}
-                </select>
-            </div>
-            <button type="submit">Save Logging</button>
-        </form>
-    </div>
-
-    <!-- AUTOMOD CARD -->
-    <div id="automod" class="card">
-        <h3>Auto Moderation</h3>
-        <p>Automatically delete links, invites, and bad words.</p>
-        <form method="POST">
-            <input type="hidden" name="form_type" value="automod">
-            
-            <div class="checkbox-group">
-                <input type="checkbox" id="am_block_links" name="block_links" {% if settings.automod and settings.automod.block_links %}checked{% endif %}>
-                <label for="am_block_links">Block All Links</label>
-            </div>
-            
-            <div class="checkbox-group">
-                <input type="checkbox" id="am_block_invites" name="block_invites" {% if settings.automod and settings.automod.block_invites %}checked{% endif %}>
-                <label for="am_block_invites">Block Discord Invites</label>
-            </div>
-
-            <div class="form-group">
-                <label>Banned Words (Comma Separated)</label>
-                <input type="text" name="banned_words" value="{% if settings.automod and settings.automod.banned_words %}{{ ','.join(settings.automod.banned_words) }}{% endif %}" placeholder="e.g. badword, anotherbadword">
-            </div>
-
-            <div class="form-group">
-                <label>Active Channels (Hold Ctrl/Cmd to select multiple)</label>
-                <div class="multiselect-container">
-                    {% for channel in channels|sort(attribute='position') %}
-                    <label>
-                        <input type="checkbox" name="automod_channels" value="{{ channel.id }}" {% if settings.automod and channel.id|string in settings.automod.active_channels|string %}checked{% endif %}>
-                        # {{ channel.name }}
-                    </label>
-                    {% endfor %}
+        <!-- AUTOROLE CARD -->
+        <div id="autorole" class="card active">
+            <h3>Autorole</h3>
+            <p>Set the role given to new members when they join.</p>
+            <form method="POST">
+                <input type="hidden" name="form_type" value="autorole">
+                <div class="form-group">
+                    <label>Assign Role</label>
+                    <select name="autorole_id">
+                        <option value="none" {% if not settings.autorole %}selected{% endif %}>Disabled</option>
+                        {% for role in roles|sort(attribute='position', reverse=True) %}
+                        <option value="{{ role.id }}" {% if settings.autorole and settings.autorole.role_id|string == role.id|string %}selected{% endif %}>{{ role.name }}</option>
+                        {% endfor %}
+                    </select>
                 </div>
-            </div>
-
-            <button type="submit">Save AutoMod</button>
-        </form>
-    </div>
-
-    <!-- ANNOUNCEMENT CARD -->
-    <div id="announcement" class="card">
-        <h3>Send Announcement</h3>
-        <p>Send a message as the bot to a specific channel.</p>
-        <form method="POST">
-            <input type="hidden" name="form_type" value="announcement">
-            <div class="form-group">
-                <label>Target Channel</label>
-                <select name="announcement_channel_id" required>
-                    <option value="" disabled selected>Select a channel...</option>
-                    {% for channel in channels|sort(attribute='position') %}
-                    <option value="{{ channel.id }}"># {{ channel.name }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="form-group">
-                <label>Message Content</label>
-                <textarea name="announcement_message" placeholder="Type your announcement here... You can use Discord markdown like **bold** or @everyone." required></textarea>
-            </div>
-            <button type="submit">Send Announcement</button>
-        </form>
-    </div>
-
-    <!-- CONFIG & ROLES CARD -->
-    <div id="config" class="card">
-        <h3>Bot Config & Role Names</h3>
-        <p>Change the role names the bot looks for without restarting the bot. Must match your Discord server roles exactly!</p>
-        <form method="POST">
-            <input type="hidden" name="form_type" value="config">
-            
-            <div class="form-group">
-                <label>Staff Role Name</label>
-                <input type="text" name="STAFF_ROLE" value="{% if settings.config %}{{ settings.config.STAFF_ROLE }}{% else %}Staff{% endif %}" required>
-            </div>
-            
-            <div class="form-group">
-                <label>Moderator Role Name</label>
-                <input type="text" name="MOD_ROLE" value="{% if settings.config %}{{ settings.config.MOD_ROLE }}{% else %}Moderator{% endif %}" required>
-            </div>
-            
-            <div class="form-group">
-                <label>Admin Role Name</label>
-                <input type="text" name="ADMIN_ROLE" value="{% if settings.config %}{{ settings.config.ADMIN_ROLE }}{% else %}Admin{% endif %}" required>
-            </div>
-
-            <div class="form-group">
-                <label>Trusted Staff Role Name</label>
-                <input type="text" name="TRUSTED_STAFF_ROLE" value="{% if settings.config %}{{ settings.config.TRUSTED_STAFF_ROLE }}{% else %}Trusted Staff{% endif %}" required>
-            </div>
-
-            <div class="form-group">
-                <label>Mod-Logs Channel</label>
-                <select name="LOG_CHANNEL_ID">
-                    <option value="none" {% if not settings.config or not settings.config.LOG_CHANNEL_ID %}selected{% endif %}>Disabled</option>
-                    {% for channel in channels|sort(attribute='position') %}
-                    <option value="{{ channel.id }}" {% if settings.config and settings.config.LOG_CHANNEL_ID and settings.config.LOG_CHANNEL_ID|string == channel.id|string %}selected{% endif %}>
-                        # {{ channel.name }}
-                    </option>
-                    {% endfor %}
-                </select>
-            </div>
-
-            <button type="submit">Save Config</button>
-        </form>
-    </div>
-
-    <!-- APPLICATIONS CARD -->
-    <div id="applications" class="card">
-        <h3>Applications</h3>
-        <p>Create application forms. Users will be DM'd the questions one by one when they click the apply button.</p>
-
-        <!-- Send Panel Section -->
-        <div style="background-color: var(--input-bg); padding: 15px; border-radius: 6px; margin-bottom: 25px; border: 1px solid var(--border);">
-            <h4 style="margin-top:0;">Send Application Panel</h4>
-            <form method="POST" style="display:flex; gap:10px; align-items:center;">
-                <input type="hidden" name="form_type" value="send_app_panel">
-                <select name="panel_app_id" required style="flex:1;">
-                    <option value="" disabled selected>Select App...</option>
-                    {% for app in settings.applications %}
-                    <option value="{{ app.app_id }}">{{ app.app_name }} ({{ app.app_id }})</option>
-                    {% endfor %}
-                </select>
-                <select name="panel_channel_id" required style="flex:1;">
-                    <option value="" disabled selected>Select Channel to send to...</option>
-                    {% for channel in channels|sort(attribute='position') %}
-                    <option value="{{ channel.id }}"># {{ channel.name }}</option>
-                    {% endfor %}
-                </select>
-                <button type="submit" style="margin-top:0;">Send Panel</button>
+                <button type="submit">Save Autorole</button>
             </form>
         </div>
 
-        <!-- Create / Edit App Section -->
-        <form method="POST">
-            <input type="hidden" name="form_type" value="create_app">
-            <div class="form-group">
-                <label>Application ID (No spaces, e.g. staff-app)</label>
-                <input type="text" id="app_id" name="app_id" required placeholder="staff-app">
-            </div>
-            <div class="form-group">
-                <label>Application Name (e.g. Staff Application)</label>
-                <input type="text" id="app_name" name="app_name" required placeholder="Staff Application">
-            </div>
-            
-            <div class="form-group">
-                <label>Questions (Type one question per line - No Limit!)</label>
-                <textarea id="questions_text" name="questions_text" required placeholder="What is your IGN?&#10;Why do you want to join?&#10;Do you have past experience?&#10;What makes you stand out?" style="min-height: 150px;"></textarea>
-            </div>
-
-            <div class="checkbox-group">
-                <input type="checkbox" id="is_open" name="is_open" checked>
-                <label for="is_open">Application Open</label>
-            </div>
-
-            <div class="form-group">
-                <label>Submitted Channel</label>
-                <select id="submitted_channel_id" name="submitted_channel_id">
-                    <option value="none">Disabled</option>
-                    {% for channel in channels|sort(attribute='position') %}
-                    <option value="{{ channel.id }}"># {{ channel.name }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="form-group">
-                <label>Accepted Channel</label>
-                <select id="accepted_channel_id" name="accepted_channel_id">
-                    <option value="none">Disabled</option>
-                    {% for channel in channels|sort(attribute='position') %}
-                    <option value="{{ channel.id }}"># {{ channel.name }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="form-group">
-                <label>Denied Channel</label>
-                <select id="denied_channel_id" name="denied_channel_id">
-                    <option value="none">Disabled</option>
-                    {% for channel in channels|sort(attribute='position') %}
-                    <option value="{{ channel.id }}"># {{ channel.name }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-
-            <button type="submit" id="app_submit_btn">Save Application</button>
-        </form>
-
-        <!-- Existing Apps List -->
-        <h3 style="margin-top: 40px;">Existing Applications</h3>
-        <div style="display: flex; flex-direction: column; gap: 10px;">
-            {% for app in settings.applications %}
-            <div style="background-color: var(--input-bg); padding: 15px; border-radius: 6px; border: 1px solid var(--border);">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                    <div>
-                        <strong>{{ app.app_name }}</strong> <code style="color:var(--text-muted); background:var(--bg-main); padding:2px 5px; border-radius:3px;">{{ app.app_id }}</code><br>
-                        <small style="color: var(--text-muted);">Status: {% if app.is_open %}🟢 Open{% else %}🔴 Closed{% endif %} | Questions: {{ app.questions|length }}</small>
-                    </div>
-                    <div style="display: flex; gap: 10px;">
-                        <!-- EDIT BUTTON -->
-                        <button type="button" class="edit-app-btn"
-                            data-app-id="{{ app.app_id }}"
-                            data-app-name="{{ app.app_name }}"
-                            data-questions="{{ '\n'.join(app.questions) | e }}"
-                            data-is-open="{{ 'true' if app.is_open else 'false' }}"
-                            data-sub-chan="{{ app.submitted_channel_id or 'none' }}"
-                            data-acc-chan="{{ app.accepted_channel_id or 'none' }}"
-                            data-den-chan="{{ app.denied_channel_id or 'none' }}"
-                            style="background-color: var(--accent); padding: 8px 15px; font-size: 13px; margin:0;"
-                        >Edit</button>
-
-                        <!-- DELETE BUTTON -->
-                        <form method="POST">
-                            <input type="hidden" name="form_type" value="delete_app">
-                            <input type="hidden" name="delete_app_id" value="{{ app.app_id }}">
-                            <button type="submit" class="danger" style="margin:0; padding: 8px 15px; font-size: 13px;">Delete</button>
-                        </form>
-                    </div>
+        <!-- WELCOME CARD -->
+        <div id="welcome" class="card">
+            <h3>Welcome Messages</h3>
+            <p>Send a message when a new member joins. Use {user}, {server}, {member_count}.</p>
+            <form method="POST">
+                <input type="hidden" name="form_type" value="welcome">
+                <div class="form-group">
+                    <label>Welcome Channel</label>
+                    <select name="welcome_channel_id">
+                        <option value="none" {% if not settings.welcome %}selected{% endif %}>Disabled</option>
+                        {% for channel in channels|sort(attribute='position') %}
+                        <option value="{{ channel.id }}" {% if settings.welcome and settings.welcome.channel_id|string == channel.id|string %}selected{% endif %}># {{ channel.name }}</option>
+                        {% endfor %}
+                    </select>
                 </div>
-                <div style="background-color: var(--bg-main); padding: 10px; border-radius: 4px; font-size: 13px; color: var(--text-muted);">
-                    {% for q in app.questions %}
-                    <div>{{ loop.index }}. {{ q }}</div>
-                    {% endfor %}
+                <div class="form-group">
+                    <label>Welcome Message</label>
+                    <textarea name="welcome_message">{% if settings.welcome %}{{ settings.welcome.message }}{% else %}Welcome {user} to {server}!{% endif %}</textarea>
                 </div>
-            </div>
-            {% endfor %}
-            {% if not settings.applications %}
-            <p style="color:var(--text-muted); font-size:14px;">No applications created yet.</p>
-            {% endif %}
+                <button type="submit">Save Welcome</button>
+            </form>
         </div>
-    </div>
 
+        <!-- LOGGING CARD -->
+        <div id="logging" class="card">
+            <h3>Event Logging</h3>
+            <p>Log deleted messages, edits, and joins/leaves.</p>
+            <form method="POST">
+                <input type="hidden" name="form_type" value="logging">
+                <div class="form-group">
+                    <label>Log Channel</label>
+                    <select name="log_channel_id">
+                        <option value="none" {% if not settings.logging %}selected{% endif %}>Disabled</option>
+                        {% for channel in channels|sort(attribute='position') %}
+                        <option value="{{ channel.id }}" {% if settings.logging and settings.logging.channel_id|string == channel.id|string %}selected{% endif %}># {{ channel.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <button type="submit">Save Logging</button>
+            </form>
+        </div>
+
+        <!-- AUTOMOD CARD -->
+        <div id="automod" class="card">
+            <h3>Auto Moderation</h3>
+            <p>Automatically delete links, invites, and bad words.</p>
+            <form method="POST">
+                <input type="hidden" name="form_type" value="automod">
+                <div class="checkbox-group"><input type="checkbox" id="am_links" name="block_links" {% if settings.automod and settings.automod.block_links %}checked{% endif %}><label for="am_links">Block All Links</label></div>
+                <div class="checkbox-group"><input type="checkbox" id="am_invites" name="block_invites" {% if settings.automod and settings.automod.block_invites %}checked{% endif %}><label for="am_invites">Block Discord Invites</label></div>
+                <div class="form-group">
+                    <label>Banned Words (Comma Separated)</label>
+                    <input type="text" name="banned_words" value="{% if settings.automod and settings.automod.banned_words %}{{ ','.join(settings.automod.banned_words) }}{% endif %}">
+                </div>
+                <div class="form-group">
+                    <label>Active Channels (Hold Ctrl/Cmd to select multiple)</label>
+                    <div class="multiselect-container" style="max-height:150px; overflow-y:auto; background-color:var(--input-bg); border-radius:6px; padding:12px; border:1px solid var(--border);">
+                        {% for channel in channels|sort(attribute='position') %}
+                        <label style="display:flex; gap:10px; margin-bottom:5px; cursor:pointer; font-weight:normal; text-transform:none;">
+                            <input type="checkbox" name="automod_channels" value="{{ channel.id }}" {% if settings.automod and channel.id|string in settings.automod.active_channels|string %}checked{% endif %}> # {{ channel.name }}
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+                <button type="submit">Save AutoMod</button>
+            </form>
+        </div>
+
+        <!-- CONFIG & ROLES CARD -->
+        <div id="config" class="card">
+            <h3>Bot Config & Role Names</h3>
+            <p>Change the role names the bot looks for. Must match your server roles exactly!</p>
+            <form method="POST">
+                <input type="hidden" name="form_type" value="config">
+                <div class="form-group"><label>Staff Role Name</label><input type="text" name="STAFF_ROLE" value="{% if settings.config %}{{ settings.config.STAFF_ROLE }}{% else %}Staff{% endif %}" required></div>
+                <div class="form-group"><label>Moderator Role Name</label><input type="text" name="MOD_ROLE" value="{% if settings.config %}{{ settings.config.MOD_ROLE }}{% else %}Moderator{% endif %}" required></div>
+                <div class="form-group"><label>Admin Role Name</label><input type="text" name="ADMIN_ROLE" value="{% if settings.config %}{{ settings.config.ADMIN_ROLE }}{% else %}Admin{% endif %}" required></div>
+                <div class="form-group"><label>Trusted Staff Role Name</label><input type="text" name="TRUSTED_STAFF_ROLE" value="{% if settings.config %}{{ settings.config.TRUSTED_STAFF_ROLE }}{% else %}Trusted Staff{% endif %}" required></div>
+                <div class="form-group">
+                    <label>Mod-Logs Channel</label>
+                    <select name="LOG_CHANNEL_ID">
+                        <option value="none" {% if not settings.config or not settings.config.LOG_CHANNEL_ID %}selected{% endif %}>Disabled</option>
+                        {% for channel in channels|sort(attribute='position') %}
+                        <option value="{{ channel.id }}" {% if settings.config and settings.config.LOG_CHANNEL_ID and settings.config.LOG_CHANNEL_ID|string == channel.id|string %}selected{% endif %}># {{ channel.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <button type="submit">Save Config</button>
+            </form>
+        </div>
+
+        <!-- COMMANDS CARD -->
+        <div id="commands" class="card">
+            <h3>Command Permissions</h3>
+            <p>Select which roles can use specific commands. Leave empty to use the bot's default permissions. Administrators always have full access.</p>
+            <form method="POST">
+                <input type="hidden" name="form_type" value="save_cmd_perms">
+                
+                {% set commands_list = [
+                    ("Moderation", ["mute", "unmute", "kick", "ban", "unban", "warn", "warnings", "clearwarnings", "purge", "lock", "unlock", "rename", "add", "remove"]),
+                    ("Giveaways", ["giveaway", "endgiveaway", "reroll"]),
+                    ("Sticky", ["sticky", "unsticky"]),
+                    ("Tickets", ["ticketpanel", "close"]),
+                    ("Reaction Roles", ["reactionrole add", "reactionrole remove"]),
+                    ("Welcome", ["welcome", "welcome_disable"]),
+                    ("AutoMod", ["automod links", "automod invites", "automod addword", "automod removeword", "automod listwords", "automod addchannel", "automod removechannel", "automod listchannels"]),
+                    ("Logging", ["setlogchannel"]),
+                    ("Autorole", ["autorole", "autorole_disable"])
+                ] %}
+                
+                {% for category, cmds in commands_list %}
+                    <h4 style="color:var(--accent); margin-top:20px; margin-bottom:10px; border-bottom:1px solid var(--border); padding-bottom:5px;">{{ category }}</h4>
+                    {% for cmd in cmds %}
+                    <div class="cmd-row">
+                        <div class="cmd-name">/{{ cmd }}</div>
+                        <div class="cmd-roles">
+                            <select name="cmd_{{ cmd }}" multiple style="height: 60px; width: 100%;">
+                                {% for role in roles|sort(attribute='position', reverse=True) %}
+                                <option value="{{ role.name }}" {% if cmd in settings.command_perms and role.name in settings.command_perms[cmd] %}selected{% endif %}>{{ role.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% endfor %}
+                <button type="submit" style="margin-top:20px;">Save Command Permissions</button>
+            </form>
+        </div>
+
+        <!-- APPLICATIONS CARD -->
+        <div id="applications" class="card">
+            <h3>Applications</h3>
+            <p>Create application forms. Users will be DM'd the questions one by one.</p>
+            <div style="background-color: var(--input-bg); padding: 15px; border-radius: 6px; margin-bottom: 25px; border: 1px solid var(--border);">
+                <h4 style="margin-top:0;">Send Application Panel</h4>
+                <form method="POST" style="display:flex; gap:10px; align-items:center;">
+                    <input type="hidden" name="form_type" value="send_app_panel">
+                    <select name="panel_app_id" required style="flex:1;"><option value="" disabled selected>Select App...</option>{% for app in settings.applications %}<option value="{{ app.app_id }}">{{ app.app_name }}</option>{% endfor %}</select>
+                    <select name="panel_channel_id" required style="flex:1;"><option value="" disabled selected>Select Channel...</option>{% for channel in channels|sort(attribute='position') %}<option value="{{ channel.id }}"># {{ channel.name }}</option>{% endfor %}</select>
+                    <button type="submit" style="margin-top:0;">Send Panel</button>
+                </form>
+            </div>
+            <form method="POST">
+                <input type="hidden" name="form_type" value="create_app">
+                <div class="form-group"><label>Application ID (No spaces)</label><input type="text" id="app_id" name="app_id" required placeholder="staff-app"></div>
+                <div class="form-group"><label>Application Name</label><input type="text" id="app_name" name="app_name" required placeholder="Staff Application"></div>
+                <div class="form-group"><label>Questions (One per line)</label><textarea id="questions_text" name="questions_text" required placeholder="Question 1&#10;Question 2" style="min-height: 100px;"></textarea></div>
+                <div class="checkbox-group"><input type="checkbox" id="is_open" name="is_open" checked><label for="is_open">Application Open</label></div>
+                <div class="form-group"><label>Submitted Channel</label><select name="submitted_channel_id"><option value="none">Disabled</option>{% for channel in channels|sort(attribute='position') %}<option value="{{ channel.id }}"># {{ channel.name }}</option>{% endfor %}</select></div>
+                <div class="form-group"><label>Accepted Channel</label><select name="accepted_channel_id"><option value="none">Disabled</option>{% for channel in channels|sort(attribute='position') %}<option value="{{ channel.id }}"># {{ channel.name }}</option>{% endfor %}</select></div>
+                <div class="form-group"><label>Denied Channel</label><select name="denied_channel_id"><option value="none">Disabled</option>{% for channel in channels|sort(attribute='position') %}<option value="{{ channel.id }}"># {{ channel.name }}</option>{% endfor %}</select></div>
+                <button type="submit" id="app_submit_btn">Save Application</button>
+            </form>
+            <h3 style="margin-top: 40px;">Existing Applications</h3>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+                {% for app in settings.applications %}
+                <div style="background-color: var(--input-bg); padding: 15px; border-radius: 6px; border: 1px solid var(--border);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <div><strong>{{ app.app_name }}</strong> <code style="color:var(--text-muted); background:var(--bg-main); padding:2px 5px; border-radius:3px;">{{ app.app_id }}</code><br><small style="color: var(--text-muted);">Status: {% if app.is_open %}🟢 Open{% else %}🔴 Closed{% endif %} | Questions: {{ app.questions|length }}</small></div>
+                        <div style="display: flex; gap: 10px;">
+                            <button type="button" class="edit-app-btn" data-app-id="{{ app.app_id }}" data-app-name="{{ app.app_name }}" data-questions="{{ '\n'.join(app.questions) | e }}" data-is-open="{{ 'true' if app.is_open else 'false' }}" data-sub-chan="{{ app.submitted_channel_id or 'none' }}" data-acc-chan="{{ app.accepted_channel_id or 'none' }}" data-den-chan="{{ app.denied_channel_id or 'none' }}" style="background-color: var(--accent); padding: 8px 15px; font-size: 13px; margin:0;">Edit</button>
+                            <form method="POST"><input type="hidden" name="form_type" value="delete_app"><input type="hidden" name="delete_app_id" value="{{ app.app_id }}"><button type="submit" class="danger" style="margin:0; padding: 8px 15px; font-size: 13px; background-color:#ed4245;">Delete</button></form>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+                {% if not settings.applications %}<p style="color:var(--text-muted); font-size:14px;">No applications created yet.</p>{% endif %}
+            </div>
+        </div>
+
+        <!-- ANNOUNCEMENT CARD -->
+        <div id="announcement" class="card">
+            <h3>Send Announcement</h3>
+            <p>Send a message as the bot to a specific channel.</p>
+            <form method="POST">
+                <input type="hidden" name="form_type" value="announcement">
+                <div class="form-group"><label>Target Channel</label><select name="announcement_channel_id" required><option value="" disabled selected>Select a channel...</option>{% for channel in channels|sort(attribute='position') %}<option value="{{ channel.id }}"># {{ channel.name }}</option>{% endfor %}</select></div>
+                <div class="form-group"><label>Message Content</label><textarea name="announcement_message" required placeholder="Type your announcement here..."></textarea></div>
+                <button type="submit">Send Announcement</button>
+            </form>
+        </div>
+
+    </div>
 </div>
 
 <script>
     function switchTab(tabId, element) {
         document.querySelectorAll('.card').forEach(card => card.classList.remove('active'));
         document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
-        
         document.getElementById(tabId).classList.add('active');
         element.classList.add('active');
     }
 
-    // Application Edit Functionality
     document.querySelectorAll('.edit-app-btn').forEach(btn => {
         btn.addEventListener('click', function() {
-            // Fill the form with existing data
             document.getElementById('app_id').value = this.dataset.appId;
-            document.getElementById('app_id').readOnly = true; // Prevent changing ID accidentally
+            document.getElementById('app_id').readOnly = true;
             document.getElementById('app_name').value = this.dataset.appName;
             document.getElementById('questions_text').value = this.dataset.questions;
             document.getElementById('is_open').checked = this.dataset.isOpen === 'true';
-            document.getElementById('submitted_channel_id').value = this.dataset.subChan;
-            document.getElementById('accepted_channel_id').value = this.dataset.accChan;
-            document.getElementById('denied_channel_id').value = this.dataset.denChan;
-            
-            // Change button text to indicate update
             document.getElementById('app_submit_btn').textContent = 'Update Application';
-            
-            // Scroll up to the form smoothly
             document.getElementById('app_id').scrollIntoView({ behavior: 'smooth' });
         });
-    });
-
-    // Reset form if typing new ID (so they can create new without reloading)
-    document.getElementById('app_id').addEventListener('input', function() {
-        if (this.readOnly) {
-            this.readOnly = false;
-            document.getElementById('app_submit_btn').textContent = 'Save Application';
-        }
     });
 </script>
 
