@@ -241,12 +241,16 @@ def guild_dashboard(guild_id):
     roles = roles_res.json() if roles_res.status_code == 200 else []
     roles = [r for r in roles if r["name"] != "@everyone" and not r["managed"]]
     
+    print(f"🔍 DEBUG: Fetched {len(roles)} roles for guild {guild_id}") # <-- ADD THIS
+    
     # Fetch Channels
     chans_res = requests.get(f"https://discord.com/api/v10/guilds/{guild_id}/channels", headers=bot_headers)
     if chans_res.status_code != 200:
         print(f"❌ CHANNELS FETCH FAILED: {chans_res.status_code} - {chans_res.text}")
     channels = chans_res.json() if chans_res.status_code == 200 else []
     text_channels = [c for c in channels if c["type"] == 0]
+
+    print(f"🔍 DEBUG: Fetched {len(text_channels)} channels for guild {guild_id}") # <-- ADD THIS
 
     # Fetch Settings
     settings = {
