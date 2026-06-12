@@ -38,6 +38,14 @@ def callback():
     if not code:
         return "Error: No code provided by Discord.", 400
 
+    # LOUD DEBUG: Print the variables we are using
+    print(f"--- DEBUGGING LOGIN ---")
+    print(f"CLIENT_ID: {CLIENT_ID}")
+    print(f"CLIENT_SECRET is loaded: {'Yes' if CLIENT_SECRET else 'NO! MISSING!'}")
+    print(f"REDIRECT_URI: {REDIRECT_URI}")
+    print(f"CODE: {code}")
+    print(f"-----------------------")
+
     data = {
         "client_id": CLIENT_ID,
         "client_secret": CLIENT_SECRET,
@@ -51,12 +59,12 @@ def callback():
     response = requests.post("https://discord.com/api/oauth2/token", data=data, headers=headers)
     tokens = response.json()
 
-    # --- DEBUGGING: Force it to show us the error ---
+    # LOUD DEBUG: Print Discord's exact response
+    print(f"DISCORD RESPONSE: {tokens}")
+
     if "access_token" not in tokens:
         error_desc = tokens.get("error_description", tokens.get("error", "Unknown error"))
-        print(f"❌ DISCORD LOGIN FAILED: {tokens}") # Prints to Render Logs
-        return f"<h1>Login Failed</h1><p>Discord said: <b>{error_desc}</b></p><p>Check your Render Logs for more details.</p>", 400
-    # -------------------------------------------------
+        return f"<h1>Login Failed</h1><p>Discord said: <b>{error_desc}</b></p><p>Please take a screenshot of this and check your Render Logs!</p>", 400
 
     session["access_token"] = tokens["access_token"]
 
@@ -64,13 +72,11 @@ def callback():
     guilds = guild_response.json()
 
     if not isinstance(guilds, list):
-        print(f"❌ GUILD FETCH FAILED: {guilds}")
         return "Failed to fetch user guilds from Discord.", 400
 
     manageable_guilds = [g for g in guilds if (int(g.get("permissions", 0)) & 0x8) == 0x8 or (int(g.get("permissions", 0)) & 0x20) == 0x20]
     session["guilds"] = manageable_guilds
     return redirect("/dashboard")
-
 @app.route("/dashboard")
 def dashboard():
     if "access_token" not in session:
