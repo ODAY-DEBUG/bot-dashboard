@@ -38,13 +38,13 @@ def callback():
     if not code:
         return "Error: No code provided by Discord.", 400
 
-    # LOUD DEBUG: Print the variables we are using
-    print(f"--- DEBUGGING LOGIN ---")
-    print(f"CLIENT_ID: {CLIENT_ID}")
-    print(f"CLIENT_SECRET is loaded: {'Yes' if CLIENT_SECRET else 'NO! MISSING!'}")
-    print(f"REDIRECT_URI: {REDIRECT_URI}")
-    print(f"CODE: {code}")
-    print(f"-----------------------")
+    # Use Flask's logger so it 100% shows up in Render logs
+    app.logger.info(f"--- DEBUGGING LOGIN ---")
+    app.logger.info(f"CLIENT_ID: {CLIENT_ID}")
+    app.logger.info(f"CLIENT_SECRET is loaded: {'Yes' if CLIENT_SECRET else 'NO! MISSING!'}")
+    app.logger.info(f"REDIRECT_URI: {REDIRECT_URI}")
+    app.logger.info(f"CODE FROM DISCORD: {code}")
+    app.logger.info(f"-----------------------")
 
     data = {
         "client_id": CLIENT_ID,
@@ -59,12 +59,28 @@ def callback():
     response = requests.post("https://discord.com/api/oauth2/token", data=data, headers=headers)
     tokens = response.json()
 
-    # LOUD DEBUG: Print Discord's exact response
-    print(f"DISCORD RESPONSE: {tokens}")
+    # Log the exact response
+    app.logger.error(f"DISCORD RESPONSE: {tokens}")
 
     if "access_token" not in tokens:
         error_desc = tokens.get("error_description", tokens.get("error", "Unknown error"))
-        return f"<h1>Login Failed</h1><p>Discord said: <b>{error_desc}</b></p><p>Please take a screenshot of this and check your Render Logs!</p>", 400
+        error_name = tokens.get("error", "N/A")
+        
+        # Put ALL the debug info right on the webpage so we can't miss it
+        debug_html = f"""
+        <h1>Login Failed</h1>
+        <p><b>Discord Error:</b> {error_name}</p>
+        <p><b>Description:</b> {error_desc}</p>
+        <hr>
+        <h3>Debug Info:</h3>
+        <ul>
+            <li>Client ID: {CLIENT_ID}</li>
+            <li>Client Secret Loaded: {'Yes' if CLIENT_SECRET else 'NO!'}</li>
+            <li>Redirect URI: {REDIRECT_URI}</li>
+            <li>Code received: {code}</li>
+        </ul>
+        """
+        return debug_html, 400
 
     session["access_token"] = tokens["access_token"]
 
@@ -77,6 +93,8 @@ def callback():
     manageable_guilds = [g for g in guilds if (int(g.get("permissions", 0)) & 0x8) == 0x8 or (int(g.get("permissions", 0)) & 0x20) == 0x20]
     session["guilds"] = manageable_guilds
     return redirect("/dashboard")
+
+
 @app.route("/dashboard")
 def dashboard():
     if "access_token" not in session:
