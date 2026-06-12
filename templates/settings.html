@@ -97,13 +97,13 @@
             <input type="hidden" name="form_type" value="automod">
             
             <div class="checkbox-group">
-                <input type="checkbox" id="block_links" name="block_links" {% if settings.automod and settings.automod.block_links %}checked{% endif %}>
-                <label for="block_links">Block All Links</label>
+                <input type="checkbox" id="am_block_links" name="block_links" {% if settings.automod and settings.automod.block_links %}checked{% endif %}>
+                <label for="am_block_links">Block All Links</label>
             </div>
             
             <div class="checkbox-group">
-                <input type="checkbox" id="block_invites" name="block_invites" {% if settings.automod and settings.automod.block_invites %}checked{% endif %}>
-                <label for="block_invites">Block Discord Invites</label>
+                <input type="checkbox" id="am_block_invites" name="block_invites" {% if settings.automod and settings.automod.block_invites %}checked{% endif %}>
+                <label for="am_block_invites">Block Discord Invites</label>
             </div>
 
             <div class="form-group">
@@ -138,9 +138,7 @@
                 <select name="announcement_channel_id" required>
                     <option value="" disabled selected>Select a channel...</option>
                     {% for channel in channels|sort(attribute='position') %}
-                    <option value="{{ channel.id }}">
-                        # {{ channel.name }}
-                    </option>
+                    <option value="{{ channel.id }}"># {{ channel.name }}</option>
                     {% endfor %}
                 </select>
             </div>
@@ -226,16 +224,16 @@
             <input type="hidden" name="form_type" value="create_app">
             <div class="form-group">
                 <label>Application ID (No spaces, e.g. staff-app)</label>
-                <input type="text" name="app_id" required placeholder="staff-app">
+                <input type="text" id="app_id" name="app_id" required placeholder="staff-app">
             </div>
             <div class="form-group">
                 <label>Application Name (e.g. Staff Application)</label>
-                <input type="text" name="app_name" required placeholder="Staff Application">
+                <input type="text" id="app_name" name="app_name" required placeholder="Staff Application">
             </div>
             
             <div class="form-group">
                 <label>Questions (Type one question per line - No Limit!)</label>
-                <textarea name="questions_text" required placeholder="What is your IGN?&#10;Why do you want to join?&#10;Do you have past experience?&#10;What makes you stand out?" style="min-height: 150px;"></textarea>
+                <textarea id="questions_text" name="questions_text" required placeholder="What is your IGN?&#10;Why do you want to join?&#10;Do you have past experience?&#10;What makes you stand out?" style="min-height: 150px;"></textarea>
             </div>
 
             <div class="checkbox-group">
@@ -245,7 +243,7 @@
 
             <div class="form-group">
                 <label>Submitted Channel</label>
-                <select name="submitted_channel_id">
+                <select id="submitted_channel_id" name="submitted_channel_id">
                     <option value="none">Disabled</option>
                     {% for channel in channels|sort(attribute='position') %}
                     <option value="{{ channel.id }}"># {{ channel.name }}</option>
@@ -254,7 +252,7 @@
             </div>
             <div class="form-group">
                 <label>Accepted Channel</label>
-                <select name="accepted_channel_id">
+                <select id="accepted_channel_id" name="accepted_channel_id">
                     <option value="none">Disabled</option>
                     {% for channel in channels|sort(attribute='position') %}
                     <option value="{{ channel.id }}"># {{ channel.name }}</option>
@@ -263,7 +261,7 @@
             </div>
             <div class="form-group">
                 <label>Denied Channel</label>
-                <select name="denied_channel_id">
+                <select id="denied_channel_id" name="denied_channel_id">
                     <option value="none">Disabled</option>
                     {% for channel in channels|sort(attribute='position') %}
                     <option value="{{ channel.id }}"># {{ channel.name }}</option>
@@ -271,7 +269,7 @@
                 </select>
             </div>
 
-            <button type="submit">Save Application</button>
+            <button type="submit" id="app_submit_btn">Save Application</button>
         </form>
 
         <!-- Existing Apps List -->
@@ -284,11 +282,26 @@
                         <strong>{{ app.app_name }}</strong> <code style="color:var(--text-muted); background:var(--bg-main); padding:2px 5px; border-radius:3px;">{{ app.app_id }}</code><br>
                         <small style="color: var(--text-muted);">Status: {% if app.is_open %}🟢 Open{% else %}🔴 Closed{% endif %} | Questions: {{ app.questions|length }}</small>
                     </div>
-                    <form method="POST">
-                        <input type="hidden" name="form_type" value="delete_app">
-                        <input type="hidden" name="delete_app_id" value="{{ app.app_id }}">
-                        <button type="submit" class="danger" style="margin:0; padding: 8px 15px; font-size: 13px;">Delete</button>
-                    </form>
+                    <div style="display: flex; gap: 10px;">
+                        <!-- EDIT BUTTON -->
+                        <button type="button" class="edit-app-btn"
+                            data-app-id="{{ app.app_id }}"
+                            data-app-name="{{ app.app_name }}"
+                            data-questions="{{ '\n'.join(app.questions) | e }}"
+                            data-is-open="{{ 'true' if app.is_open else 'false' }}"
+                            data-sub-chan="{{ app.submitted_channel_id or 'none' }}"
+                            data-acc-chan="{{ app.accepted_channel_id or 'none' }}"
+                            data-den-chan="{{ app.denied_channel_id or 'none' }}"
+                            style="background-color: var(--accent); padding: 8px 15px; font-size: 13px; margin:0;"
+                        >Edit</button>
+
+                        <!-- DELETE BUTTON -->
+                        <form method="POST">
+                            <input type="hidden" name="form_type" value="delete_app">
+                            <input type="hidden" name="delete_app_id" value="{{ app.app_id }}">
+                            <button type="submit" class="danger" style="margin:0; padding: 8px 15px; font-size: 13px;">Delete</button>
+                        </form>
+                    </div>
                 </div>
                 <div style="background-color: var(--bg-main); padding: 10px; border-radius: 4px; font-size: 13px; color: var(--text-muted);">
                     {% for q in app.questions %}
@@ -313,6 +326,35 @@
         document.getElementById(tabId).classList.add('active');
         element.classList.add('active');
     }
+
+    // Application Edit Functionality
+    document.querySelectorAll('.edit-app-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            // Fill the form with existing data
+            document.getElementById('app_id').value = this.dataset.appId;
+            document.getElementById('app_id').readOnly = true; // Prevent changing ID accidentally
+            document.getElementById('app_name').value = this.dataset.appName;
+            document.getElementById('questions_text').value = this.dataset.questions;
+            document.getElementById('is_open').checked = this.dataset.isOpen === 'true';
+            document.getElementById('submitted_channel_id').value = this.dataset.subChan;
+            document.getElementById('accepted_channel_id').value = this.dataset.accChan;
+            document.getElementById('denied_channel_id').value = this.dataset.denChan;
+            
+            // Change button text to indicate update
+            document.getElementById('app_submit_btn').textContent = 'Update Application';
+            
+            // Scroll up to the form smoothly
+            document.getElementById('app_id').scrollIntoView({ behavior: 'smooth' });
+        });
+    });
+
+    // Reset form if typing new ID (so they can create new without reloading)
+    document.getElementById('app_id').addEventListener('input', function() {
+        if (this.readOnly) {
+            this.readOnly = false;
+            document.getElementById('app_submit_btn').textContent = 'Save Application';
+        }
+    });
 </script>
 
 </body>
